@@ -24,17 +24,26 @@ const tts = () => run(() => api.tts(props.project.id, props.project.voice, props
 const preview = () => run(() => api.preview(props.project.id), '粗剪預覽已完成')
 const exportJY = () => run(() => api.exportJianying(props.project.id, draftFolder.value, props.project.name), '剪映草稿已建立')
 
-async function applyQueries() {
+async function applyAndSearch() {
   const queries = bulkQueries.value.split(/\r?\n/).map(x => x.trim()).filter(Boolean)
-  await run(() => api.setSceneQueries(props.project.id, queries), `已套用 ${queries.length} 組搜尋詞`)
-}
-async function searchAll() {
-  busy.value = true; message.value = ''
+  if (!queries.length) {
+    message.value = '請先貼入素材搜尋詞'
+    return
+  }
+  busy.value = true; message.value = '正在搜尋全部 Scene…'
   try {
+    props.project.scenes.forEach((scene, index) => {
+      scene.search_query = queries[index] || ''
+    })
+    await api.setSceneQueries(props.project.id, queries)
     bulkResults.value = await api.searchAll(props.project.id, bulkSources.value)
-    message.value = '所有 Scene 搜尋完成'
-  } catch (e) { message.value = `錯誤：${String(e)}` }
-  finally { busy.value = false }
+    const count = Object.values(bulkResults.value).filter(items => items.length > 0).length
+    message.value = `搜尋完成：${count} / ${props.project.scenes.length} 個 Scene 有候選素材`
+  } catch (e) {
+    message.value = `錯誤：${String(e)}`
+  } finally {
+    busy.value = false
+  }
 }
 function split(sceneId: string) {
   const scene = props.project.scenes.find(x => x.id === sceneId)
@@ -77,8 +86,7 @@ const merge = (id: string) => run(() => api.mergeNext(props.project.id, id), '�
         <label v-for="s in ['pexels','pixabay','wikimedia']" :key="s">
           <input type="checkbox" :value="s" v-model="bulkSources" /> {{ s }}
         </label>
-        <button @click="applyQueries" :disabled="busy">套用到全部 Scene</button>
-        <button @click="searchAll" :disabled="busy">一次搜尋全部素材</button>
+        <button @click="applyAndSearch" :disabled="busy">套用並搜尋全部素材</button>
       </div>
     </section>
 
