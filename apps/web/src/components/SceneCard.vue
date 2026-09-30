@@ -1,14 +1,22 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import type { Scene, SearchResult } from '../types'
 import { api } from '../api'
 
-const props = defineProps<{ projectId: string; scene: Scene }>()
+const props = defineProps<{
+  projectId: string
+  scene: Scene
+  presetCandidates?: SearchResult[]
+}>()
 const emit = defineEmits<{ changed: []; split: [sceneId: string]; merge: [sceneId: string] }>()
-const candidates = ref<SearchResult[]>([])
+const candidates = ref<SearchResult[]>(props.presetCandidates || [])
 const busy = ref(false)
 const error = ref('')
 const sources = ref(['pexels', 'pixabay', 'wikimedia'])
+
+watch(() => props.presetCandidates, value => {
+  if (value) candidates.value = value
+})
 
 async function save() {
   await api.updateScene(props.projectId, props.scene)
@@ -45,8 +53,8 @@ async function upload(event: Event) {
     </header>
     <textarea v-model="scene.narration" @change="save" />
     <div class="search-row">
-      <input v-model="scene.search_query" placeholder="輸入素材搜尋字，例如 remote island aerial" @change="save" @keyup.enter="search" />
-      <button @click="search" :disabled="busy">搜尋</button>
+      <input v-model="scene.search_query" placeholder="輸入素材搜尋字" @change="save" @keyup.enter="search" />
+      <button @click="search" :disabled="busy">重新搜尋</button>
       <label class="upload-btn">加入自己的素材<input type="file" accept="video/*,image/*" @change="upload" /></label>
     </div>
     <div class="source-row">
