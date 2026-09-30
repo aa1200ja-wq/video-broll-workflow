@@ -7,17 +7,19 @@
 1. 建立專案並貼入旁白稿。
 2. 依標點自動切成 Scene，可手動拆分或合併。
 3. Edge-TTS 逐 Scene 配音，依實際音檔長度建立時間碼與 SRT。
-4. 每個 Scene 自行輸入搜尋字，搜尋 Pexels、Pixabay、Wikimedia Commons。
-5. 選候選素材，或拖入自己的圖片／影片。
-6. FFmpeg 依 Scene 長度產生 1920×1080 粗剪預覽。
-7. 透過 pyJianYingDraft 建立剪映草稿，繼續人工剪輯。
+4. 一次貼入整批素材搜尋詞，每行自動對應一個 Scene。
+5. 按一次「套用並搜尋全部素材」，同時搜尋 Pexels、Pixabay、Wikimedia Commons。
+6. 每個 Scene 顯示候選素材，可人工挑選、單幕重搜，或加入自己的圖片／影片。
+7. FFmpeg 依 Scene 長度產生 1920×1080 粗剪預覽。
+8. 透過 pyJianYingDraft 建立剪映草稿，繼續人工剪輯。
 
 ## 安裝（Windows）
 
 需求：Python 3.11 優先、Node.js、FFmpeg、剪映專業版 6.0.1。
 
-1. 雙擊 `setup.bat`。
-2. 編輯根目錄 `.env`：
+1. 下載 ZIP 並解壓縮。
+2. 雙擊 `START_HERE.cmd`。
+3. 若要使用 Pexels／Pixabay，編輯根目錄 `.env`：
 
 ```env
 PEXELS_API_KEY=你的Key
@@ -26,7 +28,6 @@ PROJECTS_DIR=./projects
 DEFAULT_VOICE=zh-TW-YunJheNeural
 ```
 
-3. 雙擊 `start.bat`。
 4. 工具會開在 `http://127.0.0.1:5173`。
 
 Pexels／Pixabay Key 都只存在本機 `.env`，`.env` 已加入 `.gitignore`。
@@ -34,7 +35,9 @@ Wikimedia Commons 不需要 Key。
 
 ## 操作重點
 
-- 重新「依標點切 Scene」會重建 Scene，已選素材也會清掉；正式搜尋素材前先把 Scene 調整好。
+- 重新「依標點切 Scene」會重建 Scene；正式搜尋素材前先把 Scene 拆分／合併調整好。
+- 素材搜尋詞可一次貼上，每行依序對應 Scene 1、2、3……。
+- 可按一次「套用並搜尋全部素材」批次取得所有 Scene 的候選素材。
 - 配音後才有精準的 Scene 起訖時間。
 - 每幕候選素材由人選，不做 AI 排名。
 - 缺少的畫面可在其他工具自行生成，再用「加入自己的素材」拖入。
