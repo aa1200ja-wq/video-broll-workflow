@@ -2,8 +2,9 @@ from fastapi import APIRouter, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from app.config import settings
 from app.models import (
-    CreateProjectRequest, DownloadAssetRequest, JianyingExportRequest,
-    PreviewRequest, SceneUpdateRequest, ScriptRequest, SplitSceneRequest, TTSRequest,
+    BulkQueriesRequest, BulkSearchRequest, CreateProjectRequest,
+    DownloadAssetRequest, JianyingExportRequest, PreviewRequest,
+    SceneUpdateRequest, ScriptRequest, SplitSceneRequest, TTSRequest,
 )
 from app.services import jianying, media, preview, projects, search, tts
 
@@ -60,6 +61,27 @@ def update_scene(project_id: str, scene_id: str, body: SceneUpdateRequest):
     if body.search_query is not None:
         scene.search_query = body.search_query.strip()
     return projects.save_project(project)
+
+
+@router.put("/projects/{project_id}/scene-queries")
+def set_scene_queries(project_id: str, body: BulkQueriesRequest):
+    project = _load(project_id)
+    queries = [q.strip() for q in body.queries]
+    for index, scene in enumerate(project.scenes):
+        scene.search_query = queries[index] if index < len(queries) else ""
+    return projects.save_project(project)
+
+
+@router.post("/projects/{project_id}/search-all")
+async def search_all_scenes(project_id: str, body: BulkSearchRequest):
+    project = _load(project_id)
+    output = {}
+    for scene in project.scenes:
+        if not scene.search_query.strip():
+            output[scene.id] = []
+            continue
+        output[scene.id] = await search.search_all(scene.search_query, body.sources)
+    return output
 
 
 @router.post("/projects/{project_id}/scenes/{scene_id}/split")
