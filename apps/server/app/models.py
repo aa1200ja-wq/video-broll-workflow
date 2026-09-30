@@ -45,6 +45,14 @@ class SceneUpdateRequest(BaseModel):
     search_query: str | None = None
 
 
+class BulkQueriesRequest(BaseModel):
+    queries: list[str]
+
+
+class BulkSearchRequest(BaseModel):
+    sources: list[str] = ["pexels", "pixabay", "wikimedia"]
+
+
 class SplitSceneRequest(BaseModel):
     position: int
 
