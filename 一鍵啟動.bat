@@ -2,7 +2,14 @@
 chcp 65001 >nul
 setlocal
 cd /d "%~dp0"
+set "BROLL_ROOT=%~dp0"
 title B-roll Workflow 一鍵啟動
+
+rem Windows 可能會把從網路下載的 ZIP 內容標記為封鎖。
+rem 若本檔已成功執行，先自動解除資料夾內其餘檔案的 Zone.Identifier。
+powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+  "Get-ChildItem -LiteralPath $env:BROLL_ROOT -Recurse -Force -File | Unblock-File -ErrorAction SilentlyContinue" ^
+  >nul 2>nul
 
 echo ========================================
 echo B-roll Workflow
