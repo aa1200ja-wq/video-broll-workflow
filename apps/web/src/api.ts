@@ -1,4 +1,4 @@
-import type { Project, SearchResult, Scene } from './types'
+import type { MaterialAsset, Project, SearchResult, Scene } from './types'
 
 async function request<T>(url: string, options?: RequestInit): Promise<T> {
   const res = await fetch(url, options)
@@ -19,6 +19,13 @@ export const api = {
   projects: () => request<Project[]>('/api/projects'),
   create: (name: string) => request<Project>('/api/projects', json({ name })),
   get: (id: string) => request<Project>(`/api/projects/${id}`),
+  library: (id: string, q = '') => request<MaterialAsset[]>(
+    `/api/projects/${id}/library?q=${encodeURIComponent(q)}`),
+  libraryFile: (id: string, assetId: string) =>
+    `/api/projects/${id}/library/${encodeURIComponent(assetId)}/file`,
+  useLibrary: (id: string, sceneId: string, assetId: string) => request<Project>(
+    `/api/projects/${id}/scenes/${sceneId}/use-library/${encodeURIComponent(assetId)}`,
+    json({})),
   setScript: (id: string, script: string) => request<Project>(
     `/api/projects/${id}/script`, { ...json({ script }), method: 'PUT' }),
   setSceneQueries: (id: string, queries: string[]) => request<Project>(
