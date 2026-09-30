@@ -1,8 +1,13 @@
 import asyncio
+import re
 from urllib.parse import urlencode
 import httpx
 from app.config import settings
 from app.models import SearchResult
+
+
+def _split_tags(value: str) -> list[str]:
+    return [x.strip() for x in re.split(r"[,|]", value or "") if x.strip()]
 
 
 async def search_pexels(query: str, limit: int = 12) -> list[SearchResult]:
@@ -48,8 +53,9 @@ async def search_pixabay(query: str, limit: int = 12) -> list[SearchResult]:
             continue
         results.append(SearchResult(
             id=f"pixabay-{item['id']}", source="pixabay", media_type="video",
-            preview_url=item.get("picture_id", "") and f"https://i.vimeocdn.com/video/{item['picture_id']}_640x360.jpg",
+            preview_url=chosen.get("thumbnail", ""),
             download_url=url, page_url=item.get("pageURL", ""), author=item.get("user", ""),
+            tags=_split_tags(item.get("tags", "")),
             width=chosen.get("width", 0), height=chosen.get("height", 0),
             duration=float(item.get("duration", 0)),
         ))
@@ -71,14 +77,19 @@ async def search_wikimedia(query: str, limit: int = 12) -> list[SearchResult]:
     for page in (r.json().get("query", {}).get("pages", {}) or {}).values():
         info = (page.get("imageinfo") or [{}])[0]
         mime = info.get("mime", "")
+        if not (mime.startswith("video/") or mime.startswith("image/")):
+            continue
         media_type = "video" if mime.startswith("video/") else "image"
         metadata = info.get("extmetadata", {}) or {}
         author = (metadata.get("Artist") or {}).get("value", "")
+        categories = (metadata.get("Categories") or {}).get("value", "")
         results.append(SearchResult(
             id=f"wikimedia-{page['pageid']}", source="wikimedia", media_type=media_type,
             preview_url=info.get("thumburl") or info.get("url", ""),
             download_url=info.get("url", ""),
             page_url=info.get("descriptionurl", ""), author=author,
+            title=page.get("title", "").removeprefix("File:"),
+            tags=_split_tags(categories),
             width=int(info.get("thumbwidth", 0) or 0), height=int(info.get("thumbheight", 0) or 0),
         ))
     return results
