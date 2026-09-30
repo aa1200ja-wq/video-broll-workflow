@@ -30,6 +30,10 @@ watch(() => props.project.id, () => {
   sceneId.value = props.project.scenes[0]?.id || ''
   load()
 })
+watch(
+  () => props.project.scenes.map(scene => scene.selected_asset || '').join('|'),
+  () => load(),
+)
 onMounted(load)
 </script>
 
