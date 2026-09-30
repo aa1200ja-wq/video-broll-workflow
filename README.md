@@ -10,8 +10,10 @@
 4. 一次貼入整批素材搜尋詞，每行自動對應一個 Scene。
 5. 按一次「套用並搜尋全部素材」，同時搜尋 Pexels、Pixabay、Wikimedia Commons。
 6. 每個 Scene 顯示候選素材，可人工挑選、單幕重搜，或加入自己的圖片／影片。
-7. FFmpeg 依 Scene 長度產生 1920×1080 粗剪預覽。
-8. 透過 pyJianYingDraft 建立剪映草稿，繼續人工剪輯。
+7. 選過或上傳過的素材會進入「專案素材庫」，檔案只存一份，並保留搜尋詞、來源標籤、作者與來源網址。
+8. 素材庫可重新搜尋，並把同一支素材指定給其他 Scene，不需再次下載。
+9. FFmpeg 依 Scene 長度產生 1920×1080 粗剪預覽。
+10. 透過 pyJianYingDraft 建立剪映草稿，繼續人工剪輯。
 
 ## 安裝（Windows）
 
@@ -63,6 +65,7 @@ projects/<project-id>/
 ├─ script.txt
 ├─ audio/
 ├─ assets/
+├─ library.json
 ├─ subtitles/
 └─ exports/
 ```
