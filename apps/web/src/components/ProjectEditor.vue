@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import type { Project, SearchResult } from '../types'
 import { api } from '../api'
 import SceneCard from './SceneCard.vue'
+import MaterialLibrary from './MaterialLibrary.vue'
 
 const props = defineProps<{ project: Project }>()
 const emit = defineEmits<{ reload: [] }>()
@@ -91,7 +92,17 @@ const merge = (id: string) => run(() => api.mergeNext(props.project.id, id), '�
     </section>
 
     <section class="panel">
-      <h3>4. 檢查／替換每幕素材</h3>
+      <h3>4. 專案素材庫</h3>
+      <p class="hint">下載或上傳過的素材只存一份，可用搜尋詞／來源標籤重新找到，再指定給任何 Scene。</p>
+      <MaterialLibrary
+        :key="project.id + project.scenes.map(s => s.selected_asset || '').join('|')"
+        :project="project"
+        @changed="emit('reload')"
+      />
+    </section>
+
+    <section class="panel">
+      <h3>5. 檢查／替換每幕素材</h3>
       <SceneCard
         v-for="scene in project.scenes" :key="scene.id"
         :project-id="project.id" :scene="scene"
@@ -101,9 +112,9 @@ const merge = (id: string) => run(() => api.mergeNext(props.project.id, id), '�
     </section>
 
     <section class="panel export-row">
-      <button @click="preview" :disabled="busy">5. 產生粗剪預覽</button>
+      <button @click="preview" :disabled="busy">6. 產生粗剪預覽</button>
       <input v-model="draftFolder" placeholder="剪映草稿資料夾，例如 D:\JianyingPro Drafts" />
-      <button @click="exportJY" :disabled="busy || !draftFolder">6. 建立剪映草稿</button>
+      <button @click="exportJY" :disabled="busy || !draftFolder">7. 建立剪映草稿</button>
     </section>
     <p v-if="message" class="message">{{ message }}</p>
   </main>
