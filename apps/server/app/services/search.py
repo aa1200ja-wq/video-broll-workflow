@@ -1,3 +1,4 @@
+import asyncio
 from urllib.parse import urlencode
 import httpx
 from app.config import settings
@@ -84,11 +85,18 @@ async def search_wikimedia(query: str, limit: int = 12) -> list[SearchResult]:
 
 
 async def search_all(query: str, sources: list[str]) -> list[SearchResult]:
-    results: list[SearchResult] = []
+    tasks = []
     if "pexels" in sources:
-        results.extend(await search_pexels(query))
+        tasks.append(search_pexels(query))
     if "pixabay" in sources:
-        results.extend(await search_pixabay(query))
+        tasks.append(search_pixabay(query))
     if "wikimedia" in sources:
-        results.extend(await search_wikimedia(query))
+        tasks.append(search_wikimedia(query))
+    if not tasks:
+        return []
+    groups = await asyncio.gather(*tasks, return_exceptions=True)
+    results: list[SearchResult] = []
+    for group in groups:
+        if isinstance(group, list):
+            results.extend(group)
     return results
