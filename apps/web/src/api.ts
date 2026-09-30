@@ -21,6 +21,11 @@ export const api = {
   get: (id: string) => request<Project>(`/api/projects/${id}`),
   setScript: (id: string, script: string) => request<Project>(
     `/api/projects/${id}/script`, { ...json({ script }), method: 'PUT' }),
+  setSceneQueries: (id: string, queries: string[]) => request<Project>(
+    `/api/projects/${id}/scene-queries`,
+    { ...json({ queries }), method: 'PUT' }),
+  searchAll: (id: string, sources: string[]) => request<Record<string, SearchResult[]>>(
+    `/api/projects/${id}/search-all`, json({ sources })),
   updateScene: (id: string, scene: Scene) => request<Project>(
     `/api/projects/${id}/scenes/${scene.id}`,
     { ...json({ narration: scene.narration, search_query: scene.search_query }), method: 'PUT' }),
