@@ -1,3 +1,4 @@
+import asyncio
 from fastapi import APIRouter, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from app.config import settings
@@ -75,13 +76,15 @@ def set_scene_queries(project_id: str, body: BulkQueriesRequest):
 @router.post("/projects/{project_id}/search-all")
 async def search_all_scenes(project_id: str, body: BulkSearchRequest):
     project = _load(project_id)
-    output = {}
-    for scene in project.scenes:
+
+    async def search_scene(scene):
         if not scene.search_query.strip():
-            output[scene.id] = []
-            continue
-        output[scene.id] = await search.search_all(scene.search_query, body.sources)
-    return output
+            return scene.id, []
+        results = await search.search_all(scene.search_query, body.sources)
+        return scene.id, results
+
+    pairs = await asyncio.gather(*(search_scene(scene) for scene in project.scenes))
+    return {scene_id: results for scene_id, results in pairs}
 
 
 @router.post("/projects/{project_id}/scenes/{scene_id}/split")
