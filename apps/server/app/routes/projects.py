@@ -1,4 +1,5 @@
 import asyncio
+from pathlib import Path
 from fastapi import APIRouter, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from app.config import settings
@@ -7,7 +8,7 @@ from app.models import (
     DownloadAssetRequest, JianyingExportRequest, PreviewRequest,
     SceneUpdateRequest, ScriptRequest, SplitSceneRequest, TTSRequest,
 )
-from app.services import jianying, media, preview, projects, search, tts
+from app.services import jianying, library, media, preview, projects, search, tts
 
 router = APIRouter(prefix="/api")
 
@@ -17,6 +18,13 @@ def _load(project_id: str):
         return projects.load_project(project_id)
     except FileNotFoundError as exc:
         raise HTTPException(404, "找不到專案") from exc
+
+
+def _scene(project, scene_id: str):
+    scene = next((x for x in project.scenes if x.id == scene_id), None)
+    if not scene:
+        raise HTTPException(404, "找不到 Scene")
+    return scene
 
 
 @router.get("/health")
@@ -43,6 +51,31 @@ def get_project(project_id: str):
     return _load(project_id)
 
 
+@router.get("/projects/{project_id}/library")
+def material_library(project_id: str, q: str = ""):
+    return library.list_library(_load(project_id), q)
+
+
+@router.get("/projects/{project_id}/library/{asset_id}/file")
+def material_file(project_id: str, asset_id: str):
+    asset = library.find_asset(project_id, asset_id)
+    if not asset or not Path(asset.local_path).exists():
+        raise HTTPException(404, "找不到素材檔案")
+    return FileResponse(asset.local_path)
+
+
+@router.post("/projects/{project_id}/scenes/{scene_id}/use-library/{asset_id}")
+def use_library_asset(project_id: str, scene_id: str, asset_id: str):
+    project = _load(project_id)
+    asset = library.find_asset(project_id, asset_id)
+    if not asset:
+        raise HTTPException(404, "找不到素材")
+    try:
+        return library.assign_asset(project, _scene(project, scene_id), asset)
+    except FileNotFoundError as exc:
+        raise HTTPException(404, str(exc)) from exc
+
+
 @router.put("/projects/{project_id}/script")
 def set_script(project_id: str, body: ScriptRequest):
     project = _load(project_id)
@@ -54,9 +87,7 @@ def set_script(project_id: str, body: ScriptRequest):
 @router.put("/projects/{project_id}/scenes/{scene_id}")
 def update_scene(project_id: str, scene_id: str, body: SceneUpdateRequest):
     project = _load(project_id)
-    scene = next((x for x in project.scenes if x.id == scene_id), None)
-    if not scene:
-        raise HTTPException(404, "找不到 Scene")
+    scene = _scene(project, scene_id)
     if body.narration is not None:
         scene.narration = body.narration.strip()
     if body.search_query is not None:
@@ -140,11 +171,8 @@ async def asset_search(q: str, sources: str = "pexels,pixabay,wikimedia"):
 @router.post("/projects/{project_id}/scenes/{scene_id}/download")
 async def download(project_id: str, scene_id: str, body: DownloadAssetRequest):
     project = _load(project_id)
-    scene = next((x for x in project.scenes if x.id == scene_id), None)
-    if not scene:
-        raise HTTPException(404, "找不到 Scene")
     try:
-        return await media.download_asset(project, scene, body.result)
+        return await media.download_asset(project, _scene(project, scene_id), body.result)
     except Exception as exc:
         raise HTTPException(502, str(exc)) from exc
 
@@ -152,10 +180,7 @@ async def download(project_id: str, scene_id: str, body: DownloadAssetRequest):
 @router.post("/projects/{project_id}/scenes/{scene_id}/upload")
 async def upload(project_id: str, scene_id: str, file: UploadFile = File(...)):
     project = _load(project_id)
-    scene = next((x for x in project.scenes if x.id == scene_id), None)
-    if not scene:
-        raise HTTPException(404, "找不到 Scene")
-    return await media.upload_asset(project, scene, file)
+    return await media.upload_asset(project, _scene(project, scene_id), file)
 
 
 @router.post("/projects/{project_id}/preview")
