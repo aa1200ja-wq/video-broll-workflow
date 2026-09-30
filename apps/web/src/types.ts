@@ -32,7 +32,22 @@ export type SearchResult = {
   download_url: string
   page_url: string
   author: string
+  title: string
+  tags: string[]
   width: number
   height: number
   duration: number
+}
+
+export type MaterialAsset = {
+  id: string
+  media_type: 'video' | 'image'
+  local_path: string
+  source: string
+  source_url: string
+  author: string
+  title: string
+  tags: string[]
+  search_queries: string[]
+  used_by: string[]
 }
