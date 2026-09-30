@@ -4,8 +4,8 @@ from pathlib import Path
 
 os.environ["PROJECTS_DIR"] = tempfile.mkdtemp(prefix="broll-tests-")
 
-from app.models import Project, Scene
-from app.services import preview, projects
+from app.models import MaterialAsset, Project, Scene
+from app.services import library, preview, projects
 
 
 def test_split_script():
@@ -13,6 +13,32 @@ def test_split_script():
     project.script = "第一句。第二句！\n第三句？"
     project = projects.split_script(project)
     assert [x.narration for x in project.scenes] == ["第一句。", "第二句！", "第三句？"]
+
+
+def test_material_library_search_and_reuse():
+    project = Project(
+        id="library-test", name="library",
+        scenes=[
+            Scene(id="S001", order=1, narration="第一幕"),
+            Scene(id="S002", order=2, narration="第二幕"),
+        ],
+    )
+    projects.save_project(project)
+    asset_path = projects.project_path(project.id) / "assets" / "ocean.mp4"
+    asset_path.write_bytes(b"test")
+    asset = MaterialAsset(
+        id="demo-ocean", media_type="video",
+        local_path=str(asset_path.resolve()), source="demo",
+        title="Ocean waves", tags=["ocean", "waves", "coast"],
+        search_queries=["rough ocean"],
+    )
+    library.upsert_asset(project.id, asset)
+    assert library.list_library(project, "waves")[0].id == "demo-ocean"
+    library.assign_asset(project, project.scenes[1], asset)
+    loaded = projects.load_project(project.id)
+    items = library.list_library(loaded)
+    assert loaded.scenes[1].selected_asset == str(asset_path.resolve())
+    assert items[0].used_by == ["S002"]
 
 
 def test_preview_placeholder():
