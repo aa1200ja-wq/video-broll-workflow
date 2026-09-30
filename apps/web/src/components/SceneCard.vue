@@ -67,9 +67,8 @@ async function upload(event: Event) {
     <p v-if="error" class="error">{{ error }}</p>
     <div v-if="candidates.length" class="candidates">
       <button v-for="item in candidates" :key="item.id" class="candidate" @click="choose(item)">
-        <video v-if="item.media_type === 'video'" :src="item.preview_url" muted playsinline />
-        <img v-else :src="item.preview_url" alt="候選素材" />
-        <span>{{ item.source }} · 使用</span>
+        <img :src="item.preview_url" :alt="item.source + ' 候選素材'" />
+        <span>{{ item.source }} · {{ item.media_type }} · 使用</span>
       </button>
     </div>
   </section>
