@@ -95,7 +95,7 @@ const merge = (id: string) => run(() => api.mergeNext(props.project.id, id), '�
       <h3>4. 專案素材庫</h3>
       <p class="hint">下載或上傳過的素材只存一份，可用搜尋詞／來源標籤重新找到，再指定給任何 Scene。</p>
       <MaterialLibrary
-        :key="project.id + project.scenes.map(s => s.selected_asset || '').join('|')"
+        :key="project.id"
         :project="project"
         @changed="emit('reload')"
       />
