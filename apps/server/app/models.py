@@ -71,9 +71,24 @@ class SearchResult(BaseModel):
     download_url: str
     page_url: str = ""
     author: str = ""
+    title: str = ""
+    tags: list[str] = Field(default_factory=list)
     width: int = 0
     height: int = 0
     duration: float = 0
+
+
+class MaterialAsset(BaseModel):
+    id: str
+    media_type: Literal["video", "image"]
+    local_path: str
+    source: str = "manual"
+    source_url: str = ""
+    author: str = ""
+    title: str = ""
+    tags: list[str] = Field(default_factory=list)
+    search_queries: list[str] = Field(default_factory=list)
+    used_by: list[str] = Field(default_factory=list)
 
 
 class DownloadAssetRequest(BaseModel):
