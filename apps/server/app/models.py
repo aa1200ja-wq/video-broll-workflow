@@ -1,0 +1,81 @@
+from typing import Literal
+from pydantic import BaseModel, Field
+
+
+class Scene(BaseModel):
+    id: str
+    order: int
+    narration: str
+    start: float = 0
+    end: float = 0
+    search_query: str = ""
+    selected_asset: str | None = None
+    selected_asset_type: Literal["video", "image"] | None = None
+    source_name: str | None = None
+    source_url: str | None = None
+    status: str = "waiting"
+
+    @property
+    def duration(self) -> float:
+        return max(0.1, self.end - self.start)
+
+
+class Project(BaseModel):
+    id: str
+    name: str
+    script: str = ""
+    voice: str = "zh-TW-YunJheNeural"
+    rate: str = "+0%"
+    pitch: str = "+0Hz"
+    width: int = 1920
+    height: int = 1080
+    scenes: list[Scene] = Field(default_factory=list)
+
+
+class CreateProjectRequest(BaseModel):
+    name: str
+
+
+class ScriptRequest(BaseModel):
+    script: str
+
+
+class SceneUpdateRequest(BaseModel):
+    narration: str | None = None
+    search_query: str | None = None
+
+
+class SplitSceneRequest(BaseModel):
+    position: int
+
+
+class TTSRequest(BaseModel):
+    voice: str | None = None
+    rate: str = "+0%"
+    pitch: str = "+0Hz"
+
+
+class SearchResult(BaseModel):
+    id: str
+    source: str
+    media_type: Literal["video", "image"]
+    preview_url: str
+    download_url: str
+    page_url: str = ""
+    author: str = ""
+    width: int = 0
+    height: int = 0
+    duration: float = 0
+
+
+class DownloadAssetRequest(BaseModel):
+    result: SearchResult
+
+
+class PreviewRequest(BaseModel):
+    burn_subtitles: bool = False
+
+
+class JianyingExportRequest(BaseModel):
+    draft_folder: str
+    draft_name: str | None = None
