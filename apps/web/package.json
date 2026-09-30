@@ -1,0 +1,19 @@
+{
+  "name": "broll-workflow-web",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "vue-tsc -b && vite build"
+  },
+  "dependencies": {
+    "@vitejs/plugin-vue": "latest",
+    "vite": "latest",
+    "vue": "latest"
+  },
+  "devDependencies": {
+    "typescript": "latest",
+    "vue-tsc": "latest"
+  }
+}
