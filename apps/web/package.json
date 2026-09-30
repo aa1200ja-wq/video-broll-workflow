@@ -8,12 +8,12 @@
     "build": "vue-tsc -b && vite build"
   },
   "dependencies": {
-    "@vitejs/plugin-vue": "latest",
-    "vite": "latest",
-    "vue": "latest"
+    "vue": "3.5.13"
   },
   "devDependencies": {
-    "typescript": "latest",
-    "vue-tsc": "latest"
+    "@vitejs/plugin-vue": "5.2.1",
+    "vite": "6.1.0",
+    "typescript": "5.7.3",
+    "vue-tsc": "2.2.12"
   }
 }
