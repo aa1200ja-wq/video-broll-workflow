@@ -9,9 +9,11 @@
 - FastAPI `/api/health`、建立專案、寫入腳本、無 Key 搜尋降級行為通過。
 - 所有 `.py`、`.ts`、`.vue`、`.css` 檔案均未超過 250 行。
 - V1 程式碼已上傳至 GitHub：`aa1200ja-wq/video-broll-workflow`。
-- GitHub Actions 後端測試通過：2 tests passed。
+- GitHub Actions 後端測試通過：3 tests passed。
 - GitHub Actions 前端 Vue／TypeScript 建置通過。
 - 批次搜尋已改成「一次貼搜尋詞 → 一鍵套用並搜尋全部 Scene」。
+- 專案素材庫測試通過：可依搜尋詞／標籤查找已下載素材，並跨 Scene 重複使用。
+- 新增素材管理介面：本機預覽、標籤、使用中的 Scene、指定給任意 Scene。
 
 仍需在 Windows 本機使用 `START_HERE.cmd` 驗證：
 
