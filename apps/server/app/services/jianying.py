@@ -4,12 +4,8 @@ import uuid
 from pathlib import Path
 from app.config import settings
 from app.models import Project
-from app.services.ffmpeg_utils import run_ffmpeg
 from app.services.preview import build_scene_clips
 from app.services.projects import project_path
-
-
-SAFETY_PAD = 0.5
 
 
 def _unique_name(root: Path, requested: str) -> str:
@@ -24,29 +20,26 @@ def _unique_name(root: Path, requested: str) -> str:
     return f"{base}_{index}"
 
 
+def _safe_timerange(draft, start_seconds: float, wanted_seconds: float, material_us: int):
+    wanted_us = max(1, round(wanted_seconds * 1_000_000))
+    safe_us = max(1, min(wanted_us, int(material_us)))
+    return (
+        draft.Timerange(round(start_seconds * 1_000_000), safe_us),
+        draft.Timerange(0, safe_us),
+    )
+
+
 def _safe_video_segment(draft, clip: Path, scene):
     material = draft.VideoMaterial(str(clip))
-    target = draft.trange(f"{scene.start}s", f"{scene.duration}s")
-    source = draft.Timerange(0, min(material.duration, target.duration))
+    target, source = _safe_timerange(
+        draft, scene.start, scene.duration, material.duration
+    )
     return draft.VideoSegment(material, target, source_timerange=source)
-
-
-def _build_safe_narration(base: Path, total: float) -> Path:
-    source = base / "audio" / "narration.mp3"
-    if not source.exists():
-        raise RuntimeError("請先產生旁白")
-    target = base / "exports" / "narration_safe.wav"
-    run_ffmpeg([
-        "-y", "-i", str(source), "-af", f"apad=pad_dur={SAFETY_PAD + 0.5}",
-        "-t", f"{total + SAFETY_PAD:.3f}", "-c:a", "pcm_s16le", str(target),
-    ])
-    return target
 
 
 def _safe_audio_segment(draft, narration: Path, total: float):
     material = draft.AudioMaterial(str(narration))
-    target = draft.trange("0s", f"{max(0.1, total)}s")
-    source = draft.Timerange(0, min(material.duration, target.duration))
+    target, source = _safe_timerange(draft, 0, total, material.duration)
     return draft.AudioSegment(material, target, source_timerange=source)
 
 
@@ -66,9 +59,7 @@ def export_jianying(project: Project, draft_folder: str, draft_name: str | None 
         raise ValueError("剪映草稿資料夾不存在")
 
     base = project_path(project.id)
-    clips = build_scene_clips(project, safety_pad=SAFETY_PAD)
-    total = project.scenes[-1].end
-    narration = _build_safe_narration(base, total)
+    clips = build_scene_clips(project)
     requested = (draft_name or project.name).strip() or "B-roll Workflow"
     name = _unique_name(root, requested)
     staging_root = root.parent / f".broll-staging-{uuid.uuid4().hex[:8]}"
@@ -83,10 +74,19 @@ def export_jianying(project: Project, draft_folder: str, draft_name: str | None 
             draft.TrackSpec(draft.TrackType.text, "caption"),
         ])
         for scene, clip in zip(project.scenes, clips):
-            timerange = draft.trange(f"{scene.start}s", f"{scene.duration}s")
+            timerange = draft.Timerange(
+                round(scene.start * 1_000_000),
+                max(1, round(scene.duration * 1_000_000)),
+            )
             script.add_segment(_safe_video_segment(draft, clip, scene), "main_video")
             script.add_segment(draft.TextSegment(scene.narration, timerange), "caption")
-        script.add_segment(_safe_audio_segment(draft, narration, total), "narration")
+
+        narration = base / "audio" / "narration.mp3"
+        if narration.exists():
+            script.add_segment(
+                _safe_audio_segment(draft, narration, project.scenes[-1].end),
+                "narration",
+            )
         script.save()
         os.replace(staging_root / name, root / name)
     finally:
