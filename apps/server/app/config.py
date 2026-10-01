@@ -26,6 +26,7 @@ class Settings(BaseSettings):
     projects_dir: str = str(DATA_DIR / "projects")
     default_voice: str = "zh-TW-YunJheNeural"
     jianying_draft_dir: str = ""
+    material_library_dir: str = str(DATA_DIR)
 
     model_config = SettingsConfigDict(
         env_file=str(ENV_PATH), env_file_encoding="utf-8", extra="ignore"
@@ -38,14 +39,20 @@ class Settings(BaseSettings):
         return path
 
     @property
+    def material_library_path(self) -> Path:
+        path = Path(self.material_library_dir).expanduser().resolve()
+        path.mkdir(parents=True, exist_ok=True)
+        return path
+
+    @property
     def assets_path(self) -> Path:
-        path = DATA_DIR / "assets"
+        path = self.material_library_path / "assets"
         path.mkdir(parents=True, exist_ok=True)
         return path
 
     @property
     def library_path(self) -> Path:
-        return DATA_DIR / "library.json"
+        return self.material_library_path / "library.json"
 
 
 settings = Settings()
@@ -55,6 +62,7 @@ def save_settings(
     pexels_api_key: str | None = None,
     pixabay_api_key: str | None = None,
     jianying_draft_dir: str | None = None,
+    material_library_dir: str | None = None,
 ) -> Settings:
     if pexels_api_key is not None:
         settings.pexels_api_key = pexels_api_key.strip()
@@ -62,6 +70,8 @@ def save_settings(
         settings.pixabay_api_key = pixabay_api_key.strip()
     if jianying_draft_dir is not None:
         settings.jianying_draft_dir = jianying_draft_dir.strip()
+    if material_library_dir is not None:
+        settings.material_library_dir = material_library_dir.strip() or str(DATA_DIR)
 
     q = lambda value: json.dumps(str(value), ensure_ascii=False)
     lines = [
@@ -70,6 +80,7 @@ def save_settings(
         f"PROJECTS_DIR={q(settings.projects_dir)}",
         f"DEFAULT_VOICE={q(settings.default_voice)}",
         f"JIANYING_DRAFT_DIR={q(settings.jianying_draft_dir)}",
+        f"MATERIAL_LIBRARY_DIR={q(settings.material_library_dir)}",
     ]
     ENV_PATH.write_text("\n".join(lines) + "\n", encoding="utf-8")
     return settings
