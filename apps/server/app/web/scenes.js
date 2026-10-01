@@ -6,7 +6,10 @@ const esc = value => String(value ?? "").replace(/[&<>"']/g, ch => ({
 }[ch]))
 
 function candidateCard(item, index, sceneId) {
-  const meta = [item.source === "local" ? "本機素材" : item.source, item.author]
+  const shape = item.width && item.height
+    ? (item.width >= item.height ? "橫式" : "直式") + ` ${item.width}×${item.height}`
+    : ""
+  const meta = [item.source === "local" ? "本機素材" : item.source, item.author, shape]
     .filter(Boolean).join(" · ")
   const preview = item.source === "local" && item.media_type === "video"
     ? `<video src="${esc(item.preview_url)}" muted controls preload="metadata"></video>`
@@ -103,8 +106,9 @@ export function bindSceneEvents({ notify, refreshProject, refreshLibrary }) {
       if (button.dataset.action === "search") {
         await saveScene(card)
         notify(`${sceneId} 搜尋中…`)
+        const orientation = state.project.width >= state.project.height ? "landscape" : "portrait"
         state.results[sceneId] = await api.search(
-          card.querySelector('[data-field="query"]').value, selectedSources())
+          card.querySelector('[data-field="query"]').value, selectedSources(), orientation)
         renderScenes()
         notify(`${sceneId} 找到 ${state.results[sceneId].length} 個候選素材`)
       }
