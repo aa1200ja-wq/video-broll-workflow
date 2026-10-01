@@ -50,10 +50,10 @@ def test_preview_placeholder():
     base = projects.project_path(project.id)
     audio = base / "audio" / "narration.mp3"
     audio.parent.mkdir(parents=True, exist_ok=True)
-    import subprocess
-    subprocess.run([
-        "ffmpeg", "-y", "-f", "lavfi", "-i", "sine=frequency=440:duration=1",
+    from app.services.ffmpeg_utils import run_ffmpeg
+    run_ffmpeg([
+        "-y", "-f", "lavfi", "-i", "sine=frequency=440:duration=1",
         "-q:a", "5", str(audio),
-    ], check=True, capture_output=True)
+    ])
     out = preview.build_preview(project)
     assert out.exists() and out.stat().st_size > 0
