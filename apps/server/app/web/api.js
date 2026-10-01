@@ -39,6 +39,8 @@ export const api = {
     `/api/projects/${id}/search-external`, json({ sources })),
   search: (q, sources, orientation) => request(
     `/api/search?q=${encodeURIComponent(q)}&sources=${sources.join(",")}&orientation=${orientation}`),
+  searchExternal: (q, sources, orientation) => request(
+    `/api/search-external?q=${encodeURIComponent(q)}&sources=${sources.join(",")}&orientation=${orientation}`),
   choose: (id, sceneId, result) => request(
     `/api/projects/${id}/scenes/${sceneId}/download`, json({ result })),
   upload: async (id, sceneId, file) => {
