@@ -49,6 +49,7 @@ function renderProject() {
   $("#voice").value = p?.voice || "zh-TW-YunJheNeural"
   $("#rate").value = p?.rate || "+0%"
   $("#pitch").value = p?.pitch || "+0Hz"
+  $("#rhythm").value = p?.rhythm || "natural"
   renderProjects(); renderScenes(); fillLibraryScenes()
 }
 
@@ -168,7 +169,10 @@ function bindWorkflow() {
     if (!needProject()) return
     try {
       notify("正在產生旁白與時間碼…")
-      state.project = await api.tts(state.project.id, $("#voice").value, $("#rate").value, $("#pitch").value)
+      state.project = await api.tts(
+        state.project.id, $("#voice").value, $("#rate").value,
+        $("#pitch").value, $("#rhythm").value
+      )
       await refreshProject(false); notify("旁白與時間碼完成")
     } catch (err) { notify(err.message, true) }
   })
