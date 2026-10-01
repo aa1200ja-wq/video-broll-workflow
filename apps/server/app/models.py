@@ -36,6 +36,10 @@ class CreateProjectRequest(BaseModel):
     name: str
 
 
+class ProjectNameRequest(BaseModel):
+    name: str
+
+
 class ProjectFormatRequest(BaseModel):
     ratio: Literal["16:9", "9:16"]
 
@@ -91,11 +95,21 @@ class MaterialAsset(BaseModel):
     author: str = ""
     title: str = ""
     tags: list[str] = Field(default_factory=list)
+    custom_tags: list[str] = Field(default_factory=list)
     search_queries: list[str] = Field(default_factory=list)
     width: int = 0
     height: int = 0
     duration: float = 0
     used_by: list[str] = Field(default_factory=list)
+
+
+class AssetTagsRequest(BaseModel):
+    tags: list[str] = Field(default_factory=list)
+
+
+class TagRenameRequest(BaseModel):
+    old: str
+    new: str
 
 
 class DownloadAssetRequest(BaseModel):
