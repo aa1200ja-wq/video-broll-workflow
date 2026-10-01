@@ -53,7 +53,8 @@ async def synthesize(
         )
         await comm.save(str(raw))
         try:
-            if rhythm == "fast":
+            effective_rhythm = scene.rhythm if scene.rhythm != "inherit" else rhythm
+            if effective_rhythm == "fast":
                 _tighten_audio(raw, target)
             else:
                 target.write_bytes(raw.read_bytes())
