@@ -7,6 +7,9 @@ function renderStatus() {
   document.querySelector("#api-status").textContent =
     `Pexels：${s.pexels_configured ? "已設定" : "未設定"} ｜ Pixabay：${s.pixabay_configured ? "已設定" : "未設定"}`
   document.querySelector("#jianying-dir").value = s.jianying_draft_dir || ""
+  document.querySelector("#material-library-dir").value = s.material_library_dir || ""
+  document.querySelector("#material-library-status").textContent =
+    `素材檔：${s.assets_dir || ""}`
 }
 
 export async function loadSettings() {
@@ -45,6 +48,17 @@ export function bindSettings({ notify }) {
     try {
       state.settings = await api.saveSettings({ jianying_draft_dir: path })
       renderStatus(); notify("剪映草稿位置已儲存")
+    } catch (err) { notify(err.message, true) }
+  })
+
+  document.querySelector("#save-material-library").addEventListener("click", async () => {
+    const path = document.querySelector("#material-library-dir").value.trim()
+    if (!path) { notify("請輸入素材庫資料夾", true); return }
+    try {
+      notify("正在搬移素材庫，請不要關閉程式…")
+      state.settings = await api.saveSettings({ material_library_dir: path })
+      renderStatus()
+      notify("素材庫位置已更新，之後所有專案共用這個位置")
     } catch (err) { notify(err.message, true) }
   })
 }
