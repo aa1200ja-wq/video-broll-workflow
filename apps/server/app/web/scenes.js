@@ -6,13 +6,17 @@ const esc = value => String(value ?? "").replace(/[&<>"']/g, ch => ({
 }[ch]))
 
 function candidateCard(item, index, sceneId) {
-  const meta = [item.source, item.author].filter(Boolean).join(" · ")
+  const meta = [item.source === "local" ? "本機素材" : item.source, item.author]
+    .filter(Boolean).join(" · ")
+  const preview = item.source === "local" && item.media_type === "video"
+    ? `<video src="${esc(item.preview_url)}" muted controls preload="metadata"></video>`
+    : `<img src="${esc(item.preview_url)}" alt="候選素材" loading="lazy" />`
   return `
     <article class="media-card">
-      <img src="${esc(item.preview_url)}" alt="候選素材" loading="lazy" />
+      ${preview}
       <div class="media-body">
         <div class="media-meta">${esc(meta || item.media_type)}</div>
-        <button class="primary" data-action="choose" data-scene="${sceneId}" data-index="${index}">使用這個</button>
+        <button class="primary" data-action="choose" data-scene="${sceneId}" data-index="${index}">${item.source === "local" ? "使用本機素材" : "使用這個"}</button>
         ${item.page_url ? `<a href="${esc(item.page_url)}" target="_blank" class="media-meta">查看來源</a>` : ""}
       </div>
     </article>`
