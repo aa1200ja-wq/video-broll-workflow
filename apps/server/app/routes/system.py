@@ -1,8 +1,9 @@
 import os
 from pathlib import Path
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from app.config import DATA_DIR, save_settings, settings
 from app.models import SettingsUpdateRequest
+from app.services import storage
 
 router = APIRouter(prefix="/api")
 
@@ -35,18 +36,27 @@ def get_settings():
         "pexels_configured": bool(settings.pexels_api_key),
         "pixabay_configured": bool(settings.pixabay_api_key),
         "jianying_draft_dir": settings.jianying_draft_dir,
+        "material_library_dir": str(settings.material_library_path),
+        "assets_dir": str(settings.assets_path),
         "data_dir": str(DATA_DIR),
     }
 
 
 @router.put("/settings")
 def update_settings(body: SettingsUpdateRequest):
-    save_settings(
-        pexels_api_key=body.pexels_api_key,
-        pixabay_api_key=body.pixabay_api_key,
-        jianying_draft_dir=body.jianying_draft_dir,
-    )
-    return get_settings()
+    material_dir = body.material_library_dir
+    try:
+        if material_dir is not None:
+            material_dir = storage.migrate_material_library(material_dir)
+        save_settings(
+            pexels_api_key=body.pexels_api_key,
+            pixabay_api_key=body.pixabay_api_key,
+            jianying_draft_dir=body.jianying_draft_dir,
+            material_library_dir=material_dir,
+        )
+        return get_settings()
+    except (OSError, ValueError) as exc:
+        raise HTTPException(400, f"素材庫搬移失敗：{exc}") from exc
 
 
 @router.get("/system/jianying-dirs")
