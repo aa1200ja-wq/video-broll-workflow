@@ -7,13 +7,13 @@ from app.services.projects import project_path
 SAFETY_PAD = 1.0
 
 
-def _clip_for_scene(project: Project, scene: Scene) -> Path:
+def _clip_for_scene(project: Project, scene: Scene, safety_pad: float = SAFETY_PAD) -> Path:
     base = project_path(project.id)
     out_dir = base / "exports" / "scene_clips"
     out_dir.mkdir(parents=True, exist_ok=True)
     target = out_dir / f"{scene.id}.mp4"
     duration = max(0.1, scene.duration or 4.0)
-    render_duration = duration + SAFETY_PAD
+    render_duration = duration + max(0.0, safety_pad)
     scale = (
         f"scale={project.width}:{project.height}:force_original_aspect_ratio=increase,"
         f"crop={project.width}:{project.height},fps=30"
@@ -30,7 +30,7 @@ def _clip_for_scene(project: Project, scene: Scene) -> Path:
             args = [
                 "-y", "-stream_loop", "-1", "-i", str(source),
                 "-t", f"{render_duration:.3f}",
-                "-vf", f"{scale},tpad=stop_mode=clone:stop_duration=1",
+                "-vf", f"{scale},tpad=stop_mode=clone:stop_duration={max(0.0, safety_pad):.3f}",
                 "-an", "-c:v", "libx264", "-pix_fmt", "yuv420p", str(target),
             ]
     else:
@@ -44,13 +44,13 @@ def _clip_for_scene(project: Project, scene: Scene) -> Path:
     return target
 
 
-def build_scene_clips(project: Project) -> list[Path]:
-    return [_clip_for_scene(project, scene) for scene in project.scenes]
+def build_scene_clips(project: Project, safety_pad: float = SAFETY_PAD) -> list[Path]:
+    return [_clip_for_scene(project, scene, safety_pad) for scene in project.scenes]
 
 
 def build_preview(project: Project, burn_subtitles: bool = True) -> Path:
     base = project_path(project.id)
-    clips = build_scene_clips(project)
+    clips = build_scene_clips(project, safety_pad=0.0)
     concat = base / "exports" / "clips.txt"
     concat.write_text("\n".join(f"file '{p.as_posix()}'" for p in clips), encoding="utf-8")
     silent = base / "exports" / "silent.mp4"
