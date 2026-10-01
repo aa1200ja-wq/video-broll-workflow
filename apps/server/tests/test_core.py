@@ -2,10 +2,22 @@ import os
 import tempfile
 from pathlib import Path
 
-os.environ["PROJECTS_DIR"] = tempfile.mkdtemp(prefix="broll-tests-")
+_temp_root = tempfile.mkdtemp(prefix="broll-tests-")
+os.environ["BROLL_DATA_DIR"] = _temp_root
+os.environ["PROJECTS_DIR"] = str(Path(_temp_root) / "projects")
 
 from app.models import MaterialAsset, Project, Scene
+from fastapi.testclient import TestClient
+from app.main import app
 from app.services import library, preview, projects
+
+
+def test_web_ui_and_health():
+    client = TestClient(app)
+    assert client.get("/api/health").status_code == 200
+    page = client.get("/")
+    assert page.status_code == 200
+    assert "B-roll Workflow" in page.text
 
 
 def test_split_script():
