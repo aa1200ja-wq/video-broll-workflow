@@ -11,7 +11,7 @@ function candidateCard(item, index, sceneId) {
     : ""
   const meta = [item.source === "local" ? "本機素材" : item.source, item.author, shape]
     .filter(Boolean).join(" · ")
-  const preview = item.media_type === "video"
+  const preview = item.source === "local" && item.media_type === "video"
     ? `<video src="${esc(item.preview_url)}" muted controls preload="metadata"></video>`
     : `<img src="${esc(item.preview_url)}" alt="候選素材" loading="lazy" />`
   return `
