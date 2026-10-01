@@ -1,11 +1,7 @@
-import subprocess
 from pathlib import Path
 from app.models import Project, Scene
+from app.services.ffmpeg_utils import run_ffmpeg
 from app.services.projects import project_path
-
-
-def _run(cmd: list[str]) -> None:
-    subprocess.run(cmd, check=True, capture_output=True)
 
 
 def _clip_for_scene(project: Project, scene: Scene) -> Path:
@@ -18,25 +14,25 @@ def _clip_for_scene(project: Project, scene: Scene) -> Path:
     if scene.selected_asset:
         source = Path(scene.selected_asset)
         if scene.selected_asset_type == "image":
-            cmd = [
-                "ffmpeg", "-y", "-loop", "1", "-t", f"{duration:.3f}",
+            args = [
+                "-y", "-loop", "1", "-t", f"{duration:.3f}",
                 "-i", str(source), "-vf", scale, "-an", "-c:v", "libx264",
                 "-pix_fmt", "yuv420p", str(target),
             ]
         else:
-            cmd = [
-                "ffmpeg", "-y", "-stream_loop", "-1", "-i", str(source),
+            args = [
+                "-y", "-stream_loop", "-1", "-i", str(source),
                 "-t", f"{duration:.3f}", "-vf", scale, "-an", "-c:v", "libx264",
                 "-pix_fmt", "yuv420p", str(target),
             ]
     else:
-        cmd = [
-            "ffmpeg", "-y", "-f", "lavfi", "-i",
+        args = [
+            "-y", "-f", "lavfi", "-i",
             f"color=c=0x202020:s={project.width}x{project.height}:r=30",
             "-t", f"{duration:.3f}", "-an", "-c:v", "libx264",
             "-pix_fmt", "yuv420p", str(target),
         ]
-    _run(cmd)
+    run_ffmpeg(args)
     return target
 
 
@@ -50,16 +46,16 @@ def build_preview(project: Project, burn_subtitles: bool = False) -> Path:
     concat = base / "exports" / "clips.txt"
     concat.write_text("\n".join(f"file '{p.as_posix()}'" for p in clips), encoding="utf-8")
     silent = base / "exports" / "silent.mp4"
-    _run([
-        "ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", str(concat),
+    run_ffmpeg([
+        "-y", "-f", "concat", "-safe", "0", "-i", str(concat),
         "-c", "copy", str(silent),
     ])
     narration = base / "audio" / "narration.mp3"
     if not narration.exists():
         raise RuntimeError("請先產生旁白")
     merged = base / "exports" / "preview_base.mp4"
-    _run([
-        "ffmpeg", "-y", "-i", str(silent), "-i", str(narration),
+    run_ffmpeg([
+        "-y", "-i", str(silent), "-i", str(narration),
         "-c:v", "copy", "-c:a", "aac", "-shortest", str(merged),
     ])
     if not burn_subtitles:
@@ -69,8 +65,8 @@ def build_preview(project: Project, burn_subtitles: bool = False) -> Path:
     srt = base / "subtitles" / "narration.srt"
     final = base / "exports" / "preview.mp4"
     escaped = str(srt).replace("\\", "/").replace(":", "\\:").replace("'", "\\'")
-    _run([
-        "ffmpeg", "-y", "-i", str(merged), "-vf", f"subtitles='{escaped}'",
+    run_ffmpeg([
+        "-y", "-i", str(merged), "-vf", f"subtitles='{escaped}'",
         "-c:v", "libx264", "-c:a", "copy", str(final),
     ])
     return final
