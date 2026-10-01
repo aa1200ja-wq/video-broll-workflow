@@ -55,6 +55,30 @@ jobs:
             --collect-all pyJianYingDraft `
             run_local.py
           Copy-Item README.md dist\BrollWorkflow\README.md
+      - name: Smoke test portable EXE
+        shell: pwsh
+        run: |
+          $proc = Start-Process -FilePath "dist\BrollWorkflow\BrollWorkflow.exe" -PassThru
+          $ok = $false
+          for ($i = 0; $i -lt 20; $i++) {
+            Start-Sleep -Seconds 1
+            try {
+              $response = Invoke-WebRequest -UseBasicParsing "http://127.0.0.1:8765/api/health" -TimeoutSec 2
+              if ($response.StatusCode -eq 200) {
+                $ok = $true
+                break
+              }
+            } catch {}
+            if ($proc.HasExited) { break }
+          }
+          if (-not $ok) {
+            if (-not $proc.HasExited) { Stop-Process -Id $proc.Id -Force }
+            throw "Portable EXE failed to start local server"
+          }
+          Stop-Process -Id $proc.Id -Force
+      - name: Package portable ZIP
+        shell: pwsh
+        run: |
           Compress-Archive -Path dist\BrollWorkflow\* -DestinationPath BrollWorkflow-Windows.zip
       - uses: actions/upload-artifact@v4
         with:
