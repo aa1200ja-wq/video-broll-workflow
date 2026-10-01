@@ -13,11 +13,24 @@
         <strong>B-roll Workflow</strong>
         <small>旁白 → 素材 → 剪映草稿</small>
       </div>
-      <div class="create-project">
-        <input id="new-project-name" placeholder="新專案名稱" />
-        <button id="create-project">新增</button>
+      <div class="side-menu">
+        <button id="side-search-external" class="side-action">搜尋外部素材</button>
+        <button id="side-library" class="side-action">素材庫</button>
+        <button id="side-upload" class="side-action">加入本機素材</button>
+        <input id="global-upload" type="file" accept="video/*,image/*" multiple hidden />
       </div>
-      <div id="project-list" class="project-list"></div>
+      <details id="project-manager" class="project-manager">
+        <summary id="project-manager-summary">專案管理</summary>
+        <div class="create-project">
+          <input id="new-project-name" placeholder="新專案名稱" />
+          <button id="create-project">新增</button>
+        </div>
+        <div id="project-list" class="project-list"></div>
+        <div class="project-tools">
+          <button id="rename-project" class="ghost">重新命名</button>
+          <button id="delete-project" class="danger">刪除專案</button>
+        </div>
+      </details>
     </aside>
 
     <main class="main">
@@ -96,6 +109,20 @@
             <input id="library-query" placeholder="搜尋：海浪、ocean、coast…" />
             <button id="library-search">搜尋</button>
             <select id="library-scene"></select>
+          </div>
+          <div class="toolbar library-tools">
+            <label class="compact-label">標籤篩選
+              <select id="library-tag-filter"><option value="">全部標籤</option></select>
+            </label>
+            <details class="tag-manager">
+              <summary>標籤管理</summary>
+              <div class="tag-manager-body">
+                <select id="tag-manager-select"><option value="">選擇標籤</option></select>
+                <input id="tag-rename-input" placeholder="新的標籤名稱" />
+                <button id="rename-tag">重新命名</button>
+                <button id="delete-tag" class="danger">刪除標籤</button>
+              </div>
+            </details>
           </div>
           <div id="library-grid" class="card-grid"></div>
         </div>
