@@ -48,7 +48,7 @@ def main() -> None:
     from app.main import app
     import uvicorn
     threading.Thread(target=_open_browser, daemon=True).start()
-    uvicorn.run(app, host="127.0.0.1", port=PORT, log_level="warning")
+    uvicorn.run(app, host="127.0.0.1", port=PORT, log_level="warning", log_config=None)
 
 
 if __name__ == "__main__":
