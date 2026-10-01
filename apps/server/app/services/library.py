@@ -29,6 +29,52 @@ def find_asset(asset_id: str) -> MaterialAsset | None:
     return next((x for x in load_library() if x.id == asset_id), None)
 
 
+def asset_ids() -> set[str]:
+    return {item.id for item in load_library()}
+
+
+def custom_tags() -> list[str]:
+    values = {tag for item in load_library() for tag in item.custom_tags if tag.strip()}
+    return sorted(values, key=str.lower)
+
+
+def set_custom_tags(asset_id: str, tags: list[str]) -> MaterialAsset:
+    items = load_library()
+    asset = next((x for x in items if x.id == asset_id), None)
+    if not asset:
+        raise FileNotFoundError(asset_id)
+    asset.custom_tags = _merge([], tags)
+    save_library(items)
+    return asset
+
+
+def rename_custom_tag(old: str, new: str) -> int:
+    old_key, new_value = old.strip().lower(), new.strip()
+    if not old_key or not new_value:
+        raise ValueError("標籤名稱不能是空白")
+    items, changed = load_library(), 0
+    for item in items:
+        if any(tag.lower() == old_key for tag in item.custom_tags):
+            item.custom_tags = _merge(
+                [], [new_value if tag.lower() == old_key else tag for tag in item.custom_tags]
+            )
+            changed += 1
+    if changed:
+        save_library(items)
+    return changed
+
+
+def delete_custom_tag(tag: str) -> int:
+    key, items, changed = tag.strip().lower(), load_library(), 0
+    for item in items:
+        kept = [value for value in item.custom_tags if value.lower() != key]
+        if len(kept) != len(item.custom_tags):
+            item.custom_tags, changed = kept, changed + 1
+    if changed:
+        save_library(items)
+    return changed
+
+
 def upsert_asset(asset: MaterialAsset) -> MaterialAsset:
     items = load_library()
     old = next((x for x in items if x.id == asset.id), None)
@@ -42,11 +88,14 @@ def upsert_asset(asset: MaterialAsset) -> MaterialAsset:
     return asset
 
 
-def list_library(query: str = "") -> list[MaterialAsset]:
+def list_library(query: str = "", tag: str = "") -> list[MaterialAsset]:
     items = load_library()
     usage = _usage_map()
     for item in items:
         item.used_by = usage.get(str(Path(item.local_path)), [])
+    if tag.strip():
+        key = tag.strip().lower()
+        items = [item for item in items if key in {x.lower() for x in item.custom_tags}]
     if not query.strip():
         return items
     return [item for _, item in _ranked(items, query)]
@@ -127,6 +176,7 @@ def _merge_asset(old: MaterialAsset, new: MaterialAsset):
     old.author = new.author or old.author
     old.title = new.title or old.title
     old.tags = _merge(old.tags, new.tags)
+    old.custom_tags = _merge(old.custom_tags, new.custom_tags)
     old.search_queries = _merge(old.search_queries, new.search_queries)
     old.width = new.width or old.width
     old.height = new.height or old.height
@@ -181,7 +231,7 @@ def _usage_map() -> dict[str, list[str]]:
 def _search_text(asset: MaterialAsset) -> str:
     parts = [
         asset.id, asset.source, asset.author, asset.title,
-        *asset.tags, *asset.search_queries,
+        *asset.tags, *asset.custom_tags, *asset.search_queries,
     ]
     return " ".join(parts).lower()
 
