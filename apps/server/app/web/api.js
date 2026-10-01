@@ -29,8 +29,8 @@ export const api = {
     `/api/projects/${id}/scenes/${sceneId}/split`, json({ position })),
   mergeScene: (id, sceneId) => request(
     `/api/projects/${id}/scenes/${sceneId}/merge-next`, json({})),
-  tts: (id, voice, rate, pitch) => request(
-    `/api/projects/${id}/tts`, json({ voice, rate, pitch })),
+  tts: (id, voice, rate, pitch, rhythm) => request(
+    `/api/projects/${id}/tts`, json({ voice, rate, pitch, rhythm })),
   setQueries: (id, queries) => request(
     `/api/projects/${id}/scene-queries`, json({ queries }, "PUT")),
   searchAll: (id, sources) => request(
@@ -41,6 +41,8 @@ export const api = {
     `/api/search?q=${encodeURIComponent(q)}&sources=${sources.join(",")}&orientation=${orientation}`),
   searchExternal: (q, sources, orientation) => request(
     `/api/search-external?q=${encodeURIComponent(q)}&sources=${sources.join(",")}&orientation=${orientation}`),
+  searchLocal: (q, orientation) => request(
+    `/api/search-local?q=${encodeURIComponent(q)}&orientation=${orientation}`),
   choose: (id, sceneId, result) => request(
     `/api/projects/${id}/scenes/${sceneId}/download`, json({ result })),
   upload: async (id, sceneId, file) => {
