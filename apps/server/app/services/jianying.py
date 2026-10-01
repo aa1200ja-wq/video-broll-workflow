@@ -20,6 +20,14 @@ def _unique_name(root: Path, requested: str) -> str:
     return f"{base}_{index}"
 
 
+def _video_segment(draft, clip: Path, scene):
+    material = draft.VideoMaterial(str(clip))
+    target = draft.trange(f"{scene.start}s", f"{scene.duration}s")
+    source_duration = min(material.duration, target.duration)
+    source = draft.Timerange(0, max(1, source_duration))
+    return draft.VideoSegment(material, target, source_timerange=source)
+
+
 def export_jianying(project: Project, draft_folder: str, draft_name: str | None = None) -> str:
     try:
         import pyJianYingDraft as draft
@@ -39,20 +47,20 @@ def export_jianying(project: Project, draft_folder: str, draft_name: str | None 
     clips = build_scene_clips(project)
     requested = (draft_name or project.name).strip() or "B-roll Workflow"
     name = _unique_name(root, requested)
-
     staging_root = root.parent / f".broll-staging-{uuid.uuid4().hex[:8]}"
     staging_root.mkdir(parents=True, exist_ok=False)
+
     try:
         folder = draft.DraftFolder(str(staging_root))
         script = folder.create_draft(name, project.width, project.height)
         script.append_tracks([
-            draft.TrackSpec(draft.TrackType.audio, "narration"),
             draft.TrackSpec(draft.TrackType.video, "main_video"),
+            draft.TrackSpec(draft.TrackType.audio, "narration"),
             draft.TrackSpec(draft.TrackType.text, "caption"),
         ])
         for scene, clip in zip(project.scenes, clips):
             timerange = draft.trange(f"{scene.start}s", f"{scene.duration}s")
-            script.add_segment(draft.VideoSegment(str(clip), timerange), "main_video")
+            script.add_segment(_video_segment(draft, clip, scene), "main_video")
             script.add_segment(draft.TextSegment(scene.narration, timerange), "caption")
 
         narration = base / "audio" / "narration.mp3"
@@ -68,10 +76,7 @@ def export_jianying(project: Project, draft_folder: str, draft_name: str | None 
                 "narration",
             )
         script.save()
-
-        staged = staging_root / name
-        final = root / name
-        os.replace(staged, final)
+        os.replace(staging_root / name, root / name)
     finally:
         shutil.rmtree(staging_root, ignore_errors=True)
     return name
