@@ -31,7 +31,9 @@ def inspect_project(project: Project) -> dict:
 
     combined = base / "audio" / "narration.mp3"
     project_issues = []
-    if project.scenes and (not combined.exists() or combined.stat().st_size == 0):
+    if not project.scenes:
+        project_issues.append("沒有 Scene")
+    elif not combined.exists() or combined.stat().st_size == 0:
         project_issues.append("整體旁白檔不存在")
 
     return {
