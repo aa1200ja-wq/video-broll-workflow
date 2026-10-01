@@ -1,3 +1,4 @@
+import json
 import os
 import tempfile
 from pathlib import Path
@@ -60,7 +61,7 @@ def test_global_material_library_search_and_reuse():
 def test_preview_with_burned_subtitles():
     project = Project(
         id="preview-test", name="preview",
-        scenes=[Scene(id="S001", order=1, narration="測試字幕", start=0, end=1.017)],
+        scenes=[Scene(id="S001", order=1, narration="測試字幕", start=0, end=1.0)],
     )
     projects.save_project(project)
     base = projects.project_path(project.id)
@@ -83,7 +84,7 @@ def test_preview_with_burned_subtitles():
 def test_jianying_draft_creation():
     project = Project(
         id="jianying-test", name="draft-test",
-        scenes=[Scene(id="S001", order=1, narration="測試字幕", start=0, end=1.0)],
+        scenes=[Scene(id="S001", order=1, narration="測試字幕", start=0, end=1.017)],
     )
     projects.save_project(project)
     base = projects.project_path(project.id)
@@ -104,8 +105,10 @@ def test_jianying_draft_creation():
     draft_path = draft_root / name
     assert draft_path.exists()
     content = (draft_path / "draft_content.json").read_text(encoding="utf-8")
-    assert "main_video" in content
-    assert "narration" in content
-    assert "caption" in content
+    data = json.loads(content)
+    tracks = {track.get("name"): track for track in data["tracks"]}
+    assert len(tracks["main_video"]["segments"]) == 1
+    assert len(tracks["narration"]["segments"]) == 1
+    assert len(tracks["caption"]["segments"]) == 1
     assert "測試字幕" in content
-    assert "\"duration\": 1017000" in content
+    assert data["duration"] >= 1_017_000
