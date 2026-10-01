@@ -30,6 +30,9 @@ label > input { margin-top: 6px; }
 .main { padding: 22px; min-width: 0; }
 .topbar { display: flex; gap: 16px; justify-content: space-between; align-items: center; margin-bottom: 18px; }
 .topbar h1 { margin: 0 0 4px; font-size: 24px; }
+.format-row { margin-top: 8px; max-width: 190px; }
+.format-row label { font-size: 12px; }
+.format-row select { margin-top: 4px; padding: 7px 9px; }
 .tabs { display: flex; gap: 6px; }
 .tab { background: #20242b; color: #c9cdd5; }
 .tab.active { background: #e9ebef; color: #15171a; }
