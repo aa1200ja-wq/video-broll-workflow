@@ -1,4 +1,5 @@
 name: CI and Windows Build
+# v3: global library, subtitle preview, Jianying duration safety
 
 on:
   push:
