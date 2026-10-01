@@ -9,7 +9,7 @@ os.environ["PROJECTS_DIR"] = str(Path(_temp_root) / "projects")
 from app.models import MaterialAsset, Project, Scene
 from fastapi.testclient import TestClient
 from app.main import app
-from app.services import library, preview, projects
+from app.services import jianying, library, preview, projects
 
 
 def test_web_ui_and_health():
@@ -69,3 +69,23 @@ def test_preview_placeholder():
     ])
     out = preview.build_preview(project)
     assert out.exists() and out.stat().st_size > 0
+
+
+def test_jianying_draft_creation():
+    project = Project(
+        id="jianying-test", name="draft-test",
+        scenes=[Scene(id="S001", order=1, narration="測試字幕", start=0, end=1.0)],
+    )
+    projects.save_project(project)
+    base = projects.project_path(project.id)
+    audio = base / "audio" / "narration.mp3"
+    audio.parent.mkdir(parents=True, exist_ok=True)
+    from app.services.ffmpeg_utils import run_ffmpeg
+    run_ffmpeg([
+        "-y", "-f", "lavfi", "-i", "sine=frequency=440:duration=1.2",
+        "-q:a", "5", str(audio),
+    ])
+    draft_root = Path(tempfile.mkdtemp(prefix="jianying-drafts-"))
+    name = jianying.export_jianying(project, str(draft_root), "ci-draft")
+    assert name == "ci-draft"
+    assert (draft_root / "ci-draft").exists()
