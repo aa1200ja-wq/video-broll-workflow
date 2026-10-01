@@ -12,7 +12,7 @@ from app.config import settings
 from app.main import app
 from app.models import MaterialAsset, Project, Scene, SearchResult
 from app.routes import search as search_route
-from app.services import jianying, library, preview, projects
+from app.services import jianying, library, preview, projects, tts
 from app.services.ffmpeg_utils import run_ffmpeg
 
 client = TestClient(app)
@@ -152,3 +152,40 @@ def test_jianying_three_tracks_with_short_source():
     assert len(tracks["narration"]["segments"]) == 1
     assert len(tracks["caption"]["segments"]) == 1
     assert "測試字幕" in content
+
+
+
+def test_search_local_returns_only_library_assets():
+    items = client.get("/api/search-local?q=ocean&orientation=landscape").json()
+    assert all(item["source"] == "local" for item in items)
+
+
+def test_explicit_local_upload_accepts_opposite_orientation():
+    project = projects.create_project("upload-orientation")
+    project.script = "測試。"
+    project = projects.split_script(project)
+    from io import BytesIO
+    from PIL import Image
+    buffer = BytesIO()
+    Image.new("RGB", (300, 600), "white").save(buffer, format="PNG")
+    response = client.post(
+        f"/api/projects/{project.id}/scenes/S001/upload",
+        files={"file": ("portrait.png", buffer.getvalue(), "image/png")},
+    )
+    assert response.status_code == 200
+    assert response.json()["scenes"][0]["selected_asset_type"] == "image"
+
+
+def test_fast_rhythm_trims_leading_and_trailing_silence():
+    base = Path(tempfile.mkdtemp(prefix="rhythm-test-"))
+    source = base / "source.mp3"
+    target = base / "tight.mp3"
+    run_ffmpeg([
+        "-y", "-f", "lavfi", "-i", "sine=frequency=440:duration=0.4",
+        "-af", "adelay=500|500,apad=pad_dur=0.5",
+        "-c:a", "libmp3lame", "-q:a", "2", str(source),
+    ])
+    before = tts._duration(source)
+    tts._tighten_audio(source, target)
+    after = tts._duration(target)
+    assert after < before - 0.3
