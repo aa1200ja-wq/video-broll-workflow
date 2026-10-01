@@ -21,23 +21,45 @@ def _srt_time(seconds: float) -> str:
     return f"{hours:02}:{minutes:02}:{secs:02},{ms:03}"
 
 
-async def synthesize(project: Project, voice: str, rate: str, pitch: str) -> Project:
+def _tighten_audio(source: Path, target: Path) -> None:
+    run_ffmpeg([
+        "-y", "-i", str(source),
+        "-af",
+        "silenceremove=start_periods=1:start_duration=0.03:start_threshold=-50dB:"
+        "stop_periods=1:stop_duration=0.05:stop_threshold=-50dB",
+        "-c:a", "libmp3lame", "-q:a", "2", str(target),
+    ])
+
+
+async def synthesize(
+    project: Project, voice: str, rate: str, pitch: str, rhythm: str = "natural"
+) -> Project:
     try:
         import edge_tts
     except ImportError as exc:
-        raise RuntimeError("尚未安裝 edge-tts，請重新執行 START_HERE.cmd") from exc
+        raise RuntimeError("尚未安裝 edge-tts，請重新啟動工具") from exc
 
     base = project_path(project.id)
     scene_dir = base / "audio" / "scenes"
     scene_dir.mkdir(parents=True, exist_ok=True)
     clips: list[Path] = []
     cursor = 0.0
+
     for scene in project.scenes:
         target = scene_dir / f"{scene.id}.mp3"
+        raw = scene_dir / f"{scene.id}.raw.mp3"
         comm = edge_tts.Communicate(
             scene.narration, voice=voice, rate=rate, pitch=pitch
         )
-        await comm.save(str(target))
+        await comm.save(str(raw))
+        try:
+            if rhythm == "fast":
+                _tighten_audio(raw, target)
+            else:
+                target.write_bytes(raw.read_bytes())
+        finally:
+            raw.unlink(missing_ok=True)
+
         duration = _duration(target)
         scene.start = cursor
         scene.end = cursor + duration
@@ -54,16 +76,24 @@ async def synthesize(project: Project, voice: str, rate: str, pitch: str) -> Pro
         "-y", "-f", "concat", "-safe", "0", "-i", str(concat_file),
         "-c:a", "libmp3lame", "-q:a", "2", str(narration),
     ])
+
     lines: list[str] = []
     for i, scene in enumerate(project.scenes, start=1):
         lines.extend([
             str(i), f"{_srt_time(scene.start)} --> {_srt_time(scene.end)}",
             scene.narration, "",
         ])
-    (base / "subtitles" / "narration.srt").write_text("\n".join(lines), encoding="utf-8")
-    project.voice, project.rate, project.pitch = voice, rate, pitch
+    (base / "subtitles" / "narration.srt").write_text(
+        "\n".join(lines), encoding="utf-8"
+    )
+    project.voice = voice
+    project.rate = rate
+    project.pitch = pitch
+    project.rhythm = "fast" if rhythm == "fast" else "natural"
     return save_project(project)
 
 
-def synthesize_sync(project: Project, voice: str, rate: str, pitch: str) -> Project:
-    return asyncio.run(synthesize(project, voice, rate, pitch))
+def synthesize_sync(
+    project: Project, voice: str, rate: str, pitch: str, rhythm: str = "natural"
+) -> Project:
+    return asyncio.run(synthesize(project, voice, rate, pitch, rhythm))
