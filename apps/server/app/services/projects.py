@@ -1,5 +1,6 @@
 import json
 import re
+import shutil
 import uuid
 from pathlib import Path
 from app.config import settings
@@ -47,6 +48,19 @@ def list_projects() -> list[Project]:
         except (ValueError, json.JSONDecodeError):
             continue
     return sorted(items, key=lambda p: p.name.lower())
+
+
+def rename_project(project_id: str, name: str) -> Project:
+    project = load_project(project_id)
+    project.name = name.strip() or "未命名專案"
+    return save_project(project)
+
+
+def delete_project(project_id: str) -> None:
+    folder = _project_dir(project_id)
+    if not folder.exists():
+        raise FileNotFoundError(project_id)
+    shutil.rmtree(folder)
 
 
 def split_script(project: Project) -> Project:
