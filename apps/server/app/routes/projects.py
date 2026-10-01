@@ -180,7 +180,7 @@ async def generate_tts(project_id: str, body: TTSRequest):
         raise HTTPException(400, "請先輸入腳本")
     voice = body.voice or settings.default_voice
     try:
-        return await tts.synthesize(project, voice, body.rate, body.pitch)
+        return await tts.synthesize(project, voice, body.rate, body.pitch, body.rhythm)
     except Exception as exc:
         raise HTTPException(500, str(exc)) from exc
 
@@ -211,7 +211,12 @@ async def download(project_id: str, scene_id: str, body: DownloadAssetRequest):
 @router.post("/projects/{project_id}/scenes/{scene_id}/upload")
 async def upload(project_id: str, scene_id: str, file: UploadFile = File(...)):
     project = _load(project_id)
-    return await media.upload_asset(project, _scene(project, scene_id), file)
+    try:
+        return await media.upload_asset(project, _scene(project, scene_id), file)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(500, f"加入本機素材失敗：{exc}") from exc
 
 
 @router.post("/projects/{project_id}/preview")
