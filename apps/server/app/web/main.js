@@ -149,6 +149,36 @@ function bindSideMenu() {
   })
 }
 
+function renderPreflight(report) {
+  const box = $("#preflight-result")
+  box.classList.remove("hidden", "preflight-ok", "preflight-bad")
+  if (report.ready) {
+    box.classList.add("preflight-ok")
+    box.innerHTML = `<strong>✓ 可以輸出</strong><span> ${report.scene_count} 幕的素材、時間碼、旁白都完整。</span>`
+    return
+  }
+  box.classList.add("preflight-bad")
+  const rows = report.issues.map(item =>
+    `<li><strong>${item.scene_id}</strong>：缺 ${item.missing.join("、")}</li>`
+  ).join("")
+  const projectRows = report.project_issues.map(item => `<li>${item}</li>`).join("")
+  box.innerHTML = `
+    <strong>輸出前還有缺漏</strong>
+    <div class="preflight-counts">
+      沒素材 ${report.counts["素材"]} 幕 ·
+      沒時間碼 ${report.counts["時間碼"]} 幕 ·
+      沒旁白 ${report.counts["旁白"]} 幕
+    </div>
+    <ul>${rows}${projectRows}</ul>`
+}
+
+async function runPreflight() {
+  if (!needProject()) return null
+  const report = await api.preflight(state.project.id)
+  renderPreflight(report)
+  return report
+}
+
 function bindWorkflow() {
   $("#project-format").addEventListener("change", async () => {
     if (!needProject()) return
@@ -188,6 +218,12 @@ function bindWorkflow() {
       notify("搜尋完成；每幕候選素材已收合，可自行展開")
     } catch (err) { notify(err.message, true) }
   })
+  $("#preflight-check").addEventListener("click", async () => {
+    try {
+      const report = await runPreflight()
+      if (report) notify(report.ready ? "輸出前檢查通過" : "已列出缺漏 Scene", !report.ready)
+    } catch (err) { notify(err.message, true) }
+  })
   $("#make-preview").addEventListener("click", async () => {
     if (!needProject()) return
     try {
@@ -199,6 +235,11 @@ function bindWorkflow() {
   $("#export-jianying").addEventListener("click", async () => {
     if (!needProject()) return
     try {
+      const report = await runPreflight()
+      if (!report?.ready) {
+        notify("輸出前檢查未通過，請先補齊上方列出的 Scene", true)
+        return
+      }
       notify("正在建立剪映草稿…")
       const result = await api.exportJianying(state.project.id, state.project.name)
       notify(`剪映草稿「${result.draft_name}」已建立`)
