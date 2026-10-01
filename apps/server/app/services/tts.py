@@ -21,6 +21,10 @@ def _srt_time(seconds: float) -> str:
     return f"{hours:02}:{minutes:02}:{secs:02},{ms:03}"
 
 
+def _effective_rhythm(scene, default: str) -> str:
+    return scene.rhythm if scene.rhythm != "inherit" else default
+
+
 def _tighten_audio(source: Path, target: Path) -> None:
     run_ffmpeg([
         "-y", "-i", str(source),
@@ -53,7 +57,7 @@ async def synthesize(
         )
         await comm.save(str(raw))
         try:
-            effective_rhythm = scene.rhythm if scene.rhythm != "inherit" else rhythm
+            effective_rhythm = _effective_rhythm(scene, rhythm)
             if effective_rhythm == "fast":
                 _tighten_audio(raw, target)
             else:
