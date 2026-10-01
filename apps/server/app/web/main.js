@@ -25,7 +25,8 @@ function renderProjects() {
 function renderProject() {
   const p = state.project
   $("#project-title").textContent = p?.name || "請建立專案"
-  $("#project-meta").textContent = p ? `${p.scenes.length} 個 Scene · 1920×1080` : ""
+  $("#project-meta").textContent = p ? `${p.scenes.length} 個 Scene · ${p.width}×${p.height}` : ""
+  if (p) $("#project-format").value = p.width >= p.height ? "16:9" : "9:16"
   $("#script").value = p?.script || ""
   $("#voice").value = p?.voice || "zh-TW-YunJheNeural"
   $("#rate").value = p?.rate || "+0%"
@@ -89,6 +90,17 @@ function bindProjectActions() {
 }
 
 function bindWorkflow() {
+  $("#project-format").addEventListener("change", async () => {
+    if (!needProject()) return
+    try {
+      state.project = await api.setFormat(state.project.id, $("#project-format").value)
+      await refreshProject(false)
+      state.results = {}
+      renderScenes()
+      notify("畫面比例已更新，後續搜尋會自動匹配橫式／直式素材")
+    } catch (err) { notify(err.message, true) }
+  })
+
   $("#split-script").addEventListener("click", async () => {
     if (!needProject()) return
     try {
