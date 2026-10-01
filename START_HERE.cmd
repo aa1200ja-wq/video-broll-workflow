@@ -8,18 +8,21 @@ echo B-roll Workflow
 echo ========================================
 echo.
 
-where py >nul 2>nul
+py -3.11 --version >nul 2>nul
 if not errorlevel 1 (
-  set "PY=py"
+  set "PY=py -3.11"
   goto :python_ready
 )
-where python >nul 2>nul
+python --version >nul 2>nul
 if not errorlevel 1 (
-  set "PY=python"
-  goto :python_ready
+  python -c "import sys; raise SystemExit(0 if sys.version_info[:2] == (3,11) else 1)" >nul 2>nul
+  if not errorlevel 1 (
+    set "PY=python"
+    goto :python_ready
+  )
 )
 
-echo Python not found. Trying automatic install...
+echo Python 3.11 not found. Trying automatic install...
 where winget >nul 2>nul
 if errorlevel 1 goto :no_python
 winget install -e --id Python.Python.3.11 --scope user --silent --accept-package-agreements --accept-source-agreements
