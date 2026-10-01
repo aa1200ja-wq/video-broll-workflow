@@ -7,8 +7,7 @@ import webbrowser
 from pathlib import Path
 
 
-PORT = 8765
-URL = f"http://127.0.0.1:{PORT}"
+PREFERRED_PORT = 8765
 
 
 def _root() -> Path:
@@ -17,15 +16,19 @@ def _root() -> Path:
     return Path(__file__).resolve().parent
 
 
-def _already_running() -> bool:
-    with socket.socket() as sock:
-        sock.settimeout(0.25)
-        return sock.connect_ex(("127.0.0.1", PORT)) == 0
+def _available_port() -> int:
+    with socket.socket() as probe:
+        probe.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        if probe.connect_ex(("127.0.0.1", PREFERRED_PORT)) != 0:
+            return PREFERRED_PORT
+    with socket.socket() as probe:
+        probe.bind(("127.0.0.1", 0))
+        return int(probe.getsockname()[1])
 
 
-def _open_browser() -> None:
+def _open_browser(url: str) -> None:
     time.sleep(1.2)
-    webbrowser.open(URL)
+    webbrowser.open(url)
 
 
 def _show_error(message: str) -> None:
@@ -41,14 +44,13 @@ def _show_error(message: str) -> None:
 def main() -> None:
     root = _root()
     os.chdir(root)
-    if _already_running():
-        webbrowser.open(URL)
-        return
+    port = _available_port()
+    url = f"http://127.0.0.1:{port}"
     sys.path.insert(0, str(root / "apps" / "server"))
     from app.main import app
     import uvicorn
-    threading.Thread(target=_open_browser, daemon=True).start()
-    uvicorn.run(app, host="127.0.0.1", port=PORT, log_level="warning", log_config=None)
+    threading.Thread(target=_open_browser, args=(url,), daemon=True).start()
+    uvicorn.run(app, host="127.0.0.1", port=port, log_level="warning", log_config=None)
 
 
 if __name__ == "__main__":
