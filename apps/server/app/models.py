@@ -133,3 +133,4 @@ class SettingsUpdateRequest(BaseModel):
     pexels_api_key: str | None = None
     pixabay_api_key: str | None = None
     jianying_draft_dir: str | None = None
+    material_library_dir: str | None = None
