@@ -77,7 +77,7 @@ async def download_asset(project: Project, scene: Scene, result: SearchResult) -
     return library.assign_asset(project, scene, asset)
 
 
-async def upload_asset(project: Project, scene: Scene, upload: UploadFile) -> Project:
+async def _save_upload(upload: UploadFile, custom_tags: list[str] | None = None) -> MaterialAsset:
     suffix = Path(upload.filename or "asset").suffix.lower()
     asset_id = f"manual-{uuid.uuid4().hex[:10]}"
     target = settings.assets_path / f"{asset_id}{suffix or '.bin'}"
@@ -88,8 +88,20 @@ async def upload_asset(project: Project, scene: Scene, upload: UploadFile) -> Pr
     asset = MaterialAsset(
         id=asset_id, media_type=media_type, local_path=str(target.resolve()),
         source="manual", title=upload.filename or asset_id,
-        search_queries=[scene.search_query] if scene.search_query.strip() else [],
-        width=width, height=height, duration=duration,
+        custom_tags=custom_tags or [], width=width, height=height, duration=duration,
     )
-    library.upsert_asset(asset)
+    return library.upsert_asset(asset)
+
+
+async def upload_library_asset(
+    upload: UploadFile, custom_tags: list[str] | None = None
+) -> MaterialAsset:
+    return await _save_upload(upload, custom_tags)
+
+
+async def upload_asset(project: Project, scene: Scene, upload: UploadFile) -> Project:
+    asset = await _save_upload(upload)
+    if scene.search_query.strip():
+        asset.search_queries = [*asset.search_queries, scene.search_query.strip()]
+        library.upsert_asset(asset)
     return library.assign_asset(project, scene, asset)
