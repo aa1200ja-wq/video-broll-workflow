@@ -16,3 +16,10 @@ async def search_external(q: str, sources: str = "pexels,pixabay,wikimedia", ori
         return [item for item in items if item.id not in downloaded]
     except Exception as exc:
         raise HTTPException(502, str(exc)) from exc
+
+
+@router.get("/search-local")
+def search_local(q: str = "", orientation: str = ""):
+    if not q.strip():
+        return []
+    return library.search_results(q.strip(), orientation)
