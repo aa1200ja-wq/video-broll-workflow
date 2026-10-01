@@ -24,7 +24,11 @@ export const api = {
   setScript: (id, script) => request(`/api/projects/${id}/script`, json({ script }, "PUT")),
   updateScene: (id, scene) => request(
     `/api/projects/${id}/scenes/${scene.id}`,
-    json({ narration: scene.narration, search_query: scene.search_query }, "PUT")),
+    json({
+      narration: scene.narration,
+      search_query: scene.search_query,
+      rhythm: scene.rhythm || "inherit",
+    }, "PUT")),
   splitScene: (id, sceneId, position) => request(
     `/api/projects/${id}/scenes/${sceneId}/split`, json({ position })),
   mergeScene: (id, sceneId) => request(
