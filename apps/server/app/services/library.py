@@ -121,7 +121,7 @@ def _merge_legacy(items: list[MaterialAsset]):
 
 
 def _merge_asset(old: MaterialAsset, new: MaterialAsset):
-    if new.local_path and Path(new.local_path).exists():
+    if (not old.local_path or not Path(old.local_path).exists()) and new.local_path and Path(new.local_path).exists():
         old.local_path = new.local_path
     old.source_url = new.source_url or old.source_url
     old.author = new.author or old.author
