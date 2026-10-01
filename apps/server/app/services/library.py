@@ -119,11 +119,13 @@ def search_results(query: str, orientation: str = "", limit: int = 12) -> list[S
     return output
 
 
-def assign_asset(project: Project, scene: Scene, asset: MaterialAsset) -> Project:
+def assign_asset(
+    project: Project, scene: Scene, asset: MaterialAsset, enforce_orientation: bool = True
+) -> Project:
     if not Path(asset.local_path).exists():
         raise FileNotFoundError("素材檔案不存在")
     expected = "landscape" if project.width >= project.height else "portrait"
-    if not _orientation_ok(asset, expected):
+    if enforce_orientation and not _orientation_ok(asset, expected):
         actual = "橫式" if asset.width >= asset.height else "直式"
         wanted = "橫式" if expected == "landscape" else "直式"
         raise ValueError(f"素材是{actual}，目前專案設定為{wanted}，請換素材或切換專案比例")
