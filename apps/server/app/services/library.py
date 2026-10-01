@@ -79,7 +79,7 @@ def upsert_asset(asset: MaterialAsset) -> MaterialAsset:
     items = load_library()
     old = next((x for x in items if x.id == asset.id), None)
     if old:
-        _merge_asset(old, asset)
+        _merge_asset(old, asset, include_custom=True)
         asset = old
     else:
         items.append(asset)
@@ -161,7 +161,7 @@ def _merge_legacy(items: list[MaterialAsset]):
                 continue
             if incoming.id in by_id:
                 before = by_id[incoming.id].model_dump()
-                _merge_asset(by_id[incoming.id], incoming)
+                _merge_asset(by_id[incoming.id], incoming, include_custom=False)
                 changed |= before != by_id[incoming.id].model_dump()
             else:
                 by_id[incoming.id] = incoming
@@ -169,14 +169,15 @@ def _merge_legacy(items: list[MaterialAsset]):
     return list(by_id.values()), changed
 
 
-def _merge_asset(old: MaterialAsset, new: MaterialAsset):
+def _merge_asset(old: MaterialAsset, new: MaterialAsset, include_custom: bool = True):
     if (not old.local_path or not Path(old.local_path).exists()) and new.local_path and Path(new.local_path).exists():
         old.local_path = new.local_path
     old.source_url = new.source_url or old.source_url
     old.author = new.author or old.author
     old.title = new.title or old.title
     old.tags = _merge(old.tags, new.tags)
-    old.custom_tags = _merge(old.custom_tags, new.custom_tags)
+    if include_custom:
+        old.custom_tags = _merge(old.custom_tags, new.custom_tags)
     old.search_queries = _merge(old.search_queries, new.search_queries)
     old.width = new.width or old.width
     old.height = new.height or old.height
