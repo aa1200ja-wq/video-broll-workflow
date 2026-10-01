@@ -44,6 +44,13 @@ function sceneCard(scene) {
       <div class="scene-head">
         <strong>${scene.id}</strong><span>${time}</span>
         ${scene.selected_asset ? '<span class="ok">已選素材</span>' : ""}
+        <label class="scene-rhythm">節奏
+          <select data-field="rhythm">
+            <option value="inherit" ${(scene.rhythm || "inherit") === "inherit" ? "selected" : ""}>跟隨全局</option>
+            <option value="natural" ${scene.rhythm === "natural" ? "selected" : ""}>自然</option>
+            <option value="fast" ${scene.rhythm === "fast" ? "selected" : ""}>快切</option>
+          </select>
+        </label>
       </div>
       <textarea data-field="narration">${esc(scene.narration)}</textarea>
       <input data-field="query" value="${esc(scene.search_query)}" placeholder="素材搜尋詞" />
@@ -81,6 +88,7 @@ async function saveScene(card) {
   if (!scene) return
   scene.narration = card.querySelector('[data-field="narration"]').value
   scene.search_query = card.querySelector('[data-field="query"]').value
+  scene.rhythm = card.querySelector('[data-field="rhythm"]').value
   await api.updateScene(state.project.id, scene)
 }
 
