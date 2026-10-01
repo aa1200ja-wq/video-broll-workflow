@@ -1,22 +1,63 @@
+import os
 from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+def _data_dir() -> Path:
+    override = os.getenv("BROLL_DATA_DIR")
+    if override:
+        path = Path(override)
+    elif os.name == "nt" and os.getenv("LOCALAPPDATA"):
+        path = Path(os.environ["LOCALAPPDATA"]) / "BrollWorkflow"
+    else:
+        path = Path.home() / ".broll-workflow"
+    path.mkdir(parents=True, exist_ok=True)
+    return path.resolve()
+
+
+DATA_DIR = _data_dir()
+ENV_PATH = DATA_DIR / ".env"
 
 
 class Settings(BaseSettings):
     pexels_api_key: str = ""
     pixabay_api_key: str = ""
-    projects_dir: str = "./projects"
+    projects_dir: str = str(DATA_DIR / "projects")
     default_voice: str = "zh-TW-YunJheNeural"
+    jianying_draft_dir: str = ""
 
     model_config = SettingsConfigDict(
-        env_file=".env", env_file_encoding="utf-8", extra="ignore"
+        env_file=str(ENV_PATH), env_file_encoding="utf-8", extra="ignore"
     )
 
     @property
     def projects_path(self) -> Path:
-        path = Path(self.projects_dir).resolve()
+        path = Path(self.projects_dir).expanduser().resolve()
         path.mkdir(parents=True, exist_ok=True)
         return path
 
 
 settings = Settings()
+
+
+def save_settings(
+    pexels_api_key: str | None = None,
+    pixabay_api_key: str | None = None,
+    jianying_draft_dir: str | None = None,
+) -> Settings:
+    if pexels_api_key is not None:
+        settings.pexels_api_key = pexels_api_key.strip()
+    if pixabay_api_key is not None:
+        settings.pixabay_api_key = pixabay_api_key.strip()
+    if jianying_draft_dir is not None:
+        settings.jianying_draft_dir = jianying_draft_dir.strip()
+
+    lines = [
+        f"PEXELS_API_KEY={settings.pexels_api_key}",
+        f"PIXABAY_API_KEY={settings.pixabay_api_key}",
+        f"PROJECTS_DIR={settings.projects_dir}",
+        f"DEFAULT_VOICE={settings.default_voice}",
+        f"JIANYING_DRAFT_DIR={settings.jianying_draft_dir}",
+    ]
+    ENV_PATH.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return settings
