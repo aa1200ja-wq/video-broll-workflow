@@ -6,6 +6,7 @@ _temp_root = tempfile.mkdtemp(prefix="broll-tests-")
 os.environ["BROLL_DATA_DIR"] = _temp_root
 os.environ["PROJECTS_DIR"] = str(Path(_temp_root) / "projects")
 
+from app.config import settings
 from app.models import MaterialAsset, Project, Scene
 from fastapi.testclient import TestClient
 from app.main import app
@@ -27,7 +28,9 @@ def test_split_script():
     assert [x.narration for x in project.scenes] == ["第一句。", "第二句！", "第三句？"]
 
 
-def test_material_library_search_and_reuse():
+def test_global_material_library_search_and_reuse():
+    if settings.library_path.exists():
+        settings.library_path.unlink()
     project = Project(
         id="library-test", name="library",
         scenes=[
@@ -36,7 +39,7 @@ def test_material_library_search_and_reuse():
         ],
     )
     projects.save_project(project)
-    asset_path = projects.project_path(project.id) / "assets" / "ocean.mp4"
+    asset_path = settings.assets_path / "ocean.mp4"
     asset_path.write_bytes(b"test")
     asset = MaterialAsset(
         id="demo-ocean", media_type="video",
@@ -44,30 +47,36 @@ def test_material_library_search_and_reuse():
         title="Ocean waves", tags=["ocean", "waves", "coast"],
         search_queries=["rough ocean"],
     )
-    library.upsert_asset(project.id, asset)
-    assert library.list_library(project, "waves")[0].id == "demo-ocean"
+    library.upsert_asset(asset)
+    assert library.list_library("waves")[0].id == "demo-ocean"
+    assert library.search_results("rough ocean")[0].source == "local"
     library.assign_asset(project, project.scenes[1], asset)
     loaded = projects.load_project(project.id)
-    items = library.list_library(loaded)
+    items = library.list_library()
     assert loaded.scenes[1].selected_asset == str(asset_path.resolve())
-    assert items[0].used_by == ["S002"]
+    assert "library / S002" in items[0].used_by
 
 
-def test_preview_placeholder():
+def test_preview_with_burned_subtitles():
     project = Project(
         id="preview-test", name="preview",
-        scenes=[Scene(id="S001", order=1, narration="測試", start=0, end=1.0)],
+        scenes=[Scene(id="S001", order=1, narration="測試字幕", start=0, end=1.0)],
     )
     projects.save_project(project)
     base = projects.project_path(project.id)
     audio = base / "audio" / "narration.mp3"
     audio.parent.mkdir(parents=True, exist_ok=True)
+    srt = base / "subtitles" / "narration.srt"
+    srt.write_text(
+        "1\n00:00:00,000 --> 00:00:01,000\n測試字幕\n",
+        encoding="utf-8",
+    )
     from app.services.ffmpeg_utils import run_ffmpeg
     run_ffmpeg([
         "-y", "-f", "lavfi", "-i", "sine=frequency=440:duration=1",
         "-q:a", "5", str(audio),
     ])
-    out = preview.build_preview(project)
+    out = preview.build_preview(project, burn_subtitles=True)
     assert out.exists() and out.stat().st_size > 0
 
 
@@ -98,3 +107,4 @@ def test_jianying_draft_creation():
     assert "main_video" in content
     assert "narration" in content
     assert "caption" in content
+    assert "測試字幕" in content
