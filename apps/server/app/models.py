@@ -27,6 +27,7 @@ class Project(BaseModel):
     voice: str = "zh-TW-YunJheNeural"
     rate: str = "+0%"
     pitch: str = "+0Hz"
+    rhythm: Literal["natural", "fast"] = "natural"
     width: int = 1920
     height: int = 1080
     scenes: list[Scene] = Field(default_factory=list)
@@ -69,6 +70,7 @@ class TTSRequest(BaseModel):
     voice: str | None = None
     rate: str = "+0%"
     pitch: str = "+0Hz"
+    rhythm: Literal["natural", "fast"] = "natural"
 
 
 class SearchResult(BaseModel):
