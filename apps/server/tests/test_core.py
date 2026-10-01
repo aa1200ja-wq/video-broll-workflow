@@ -218,3 +218,49 @@ def test_scene_rhythm_override_and_split_persistence():
     assert tts._effective_rhythm(fast_scene, "natural") == "fast"
     assert tts._effective_rhythm(natural_scene, "fast") == "natural"
     assert tts._effective_rhythm(inherit_scene, "fast") == "fast"
+
+
+
+def test_preflight_lists_missing_items_and_blocks_export():
+    project = projects.create_project("preflight-missing")
+    project.script = "第一幕。第二幕。"
+    project = projects.split_script(project)
+    report = client.get(f"/api/projects/{project.id}/preflight")
+    assert report.status_code == 200
+    data = report.json()
+    assert data["ready"] is False
+    assert data["counts"] == {"素材": 2, "時間碼": 2, "旁白": 2}
+    assert data["issues"][0]["scene_id"] == "S001"
+    blocked = client.post(
+        f"/api/projects/{project.id}/export/jianying",
+        json={"draft_folder": "", "draft_name": "blocked"},
+    )
+    assert blocked.status_code == 400
+    assert "S001" in blocked.json()["detail"]
+
+
+def test_scene_audio_endpoint_and_ready_preflight():
+    project = Project(
+        id="preflight-ready", name="ready",
+        scenes=[Scene(id="S001", order=1, narration="測試", start=0, end=1.0)],
+    )
+    asset = settings.assets_path / "ready.mp4"
+    _video(asset, 1.2)
+    project.scenes[0].selected_asset = str(asset)
+    project.scenes[0].selected_asset_type = "video"
+    projects.save_project(project)
+    base = projects.project_path(project.id)
+    scene_audio = base / "audio" / "scenes" / "S001.mp3"
+    run_ffmpeg([
+        "-y", "-f", "lavfi", "-i", "sine=frequency=440:duration=1",
+        "-q:a", "5", str(scene_audio),
+    ])
+    (base / "audio" / "narration.mp3").write_bytes(scene_audio.read_bytes())
+
+    audio_response = client.get(f"/api/projects/{project.id}/scenes/S001/audio")
+    assert audio_response.status_code == 200
+    assert audio_response.headers["content-type"].startswith("audio/mpeg")
+
+    report = client.get(f"/api/projects/{project.id}/preflight").json()
+    assert report["ready"] is True
+    assert report["issues"] == []
