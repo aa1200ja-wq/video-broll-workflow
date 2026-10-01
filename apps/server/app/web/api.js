@@ -59,6 +59,9 @@ export const api = {
   },
   preview: id => request(`/api/projects/${id}/preview`, json({ burn_subtitles: true })),
   previewUrl: id => `/api/projects/${id}/preview-file?t=${Date.now()}`,
+  sceneAudioUrl: (id, sceneId) =>
+    `/api/projects/${id}/scenes/${sceneId}/audio?t=${Date.now()}`,
+  preflight: id => request(`/api/projects/${id}/preflight`),
   exportJianying: (id, name) => request(
     `/api/projects/${id}/export/jianying`, json({ draft_folder: "", draft_name: name })),
   library: (q = "", tag = "") => request(
