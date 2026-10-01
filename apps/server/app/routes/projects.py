@@ -4,7 +4,7 @@ from fastapi import APIRouter, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from app.config import settings
 from app.models import (
-    BulkQueriesRequest, BulkSearchRequest, CreateProjectRequest,
+    BulkQueriesRequest, BulkSearchRequest, CreateProjectRequest, ProjectFormatRequest,
     DownloadAssetRequest, JianyingExportRequest, PreviewRequest,
     SceneUpdateRequest, ScriptRequest, SplitSceneRequest, TTSRequest,
 )
@@ -60,6 +60,13 @@ def create_project(body: CreateProjectRequest):
 @router.get("/projects/{project_id}")
 def get_project(project_id: str):
     return _load(project_id)
+
+
+@router.put("/projects/{project_id}/format")
+def set_format(project_id: str, body: ProjectFormatRequest):
+    project = _load(project_id)
+    project.width, project.height = ((1920, 1080) if body.ratio == "16:9" else (1080, 1920))
+    return projects.save_project(project)
 
 
 @router.get("/library")
@@ -135,8 +142,9 @@ async def search_all_scenes(project_id: str, body: BulkSearchRequest):
         query = scene.search_query.strip()
         if not query:
             return scene.id, []
-        local_items = library.search_results(query)
-        remote_items = await search.search_all(query, body.sources)
+        orientation = "landscape" if project.width >= project.height else "portrait"
+        local_items = library.search_results(query, orientation)
+        remote_items = await search.search_all(query, body.sources, orientation)
         return scene.id, _prefer_local(local_items, remote_items)
 
     pairs = await asyncio.gather(*(search_scene(scene) for scene in project.scenes))
@@ -184,12 +192,14 @@ async def generate_tts(project_id: str, body: TTSRequest):
 
 
 @router.get("/search")
-async def asset_search(q: str, sources: str = "pexels,pixabay,wikimedia"):
+async def asset_search(q: str, sources: str = "pexels,pixabay,wikimedia", orientation: str = ""):
     if not q.strip():
         return []
     try:
-        local_items = library.search_results(q.strip())
-        remote_items = await search.search_all(q.strip(), [x for x in sources.split(",") if x])
+        local_items = library.search_results(q.strip(), orientation)
+        remote_items = await search.search_all(
+            q.strip(), [x for x in sources.split(",") if x], orientation
+        )
         return _prefer_local(local_items, remote_items)
     except Exception as exc:
         raise HTTPException(502, str(exc)) from exc
