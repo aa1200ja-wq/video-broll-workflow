@@ -2,6 +2,9 @@ import { api } from "./api.js"
 import { state, selectedSources } from "./state.js"
 
 let activeAudio = null
+const expandedCandidates = new Set()
+
+const sceneKey = sceneId => `${state.project?.id || ""}:${sceneId}`
 
 const esc = value => String(value ?? "").replace(/[&<>"']/g, ch => ({
   "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;"
@@ -35,7 +38,7 @@ function sceneCard(scene) {
     ? `${scene.start.toFixed(1)}–${scene.end.toFixed(1)}s`
     : "尚未產生時間碼"
   const resultBlock = candidates.length ? `
-    <details class="candidate-wrap" open>
+    <details class="candidate-wrap" data-candidates="${scene.id}" ${expandedCandidates.has(sceneKey(scene.id)) ? "open" : ""}>
       <summary>候選素材 ${candidates.length} 筆</summary>
       <div class="candidates">
         ${candidates.map((item, i) => candidateCard(item, i, scene.id)).join("")}
@@ -104,6 +107,7 @@ async function searchExternal(card, notify) {
     card.querySelector('[data-field="query"]').value,
     selectedSources(), orientation,
   )
+  expandedCandidates.add(sceneKey(sceneId))
   renderScenes()
   notify(`${sceneId} 找到 ${state.results[sceneId].length} 個尚未下載的外部素材`)
 }
@@ -115,6 +119,7 @@ async function searchLocal(card, notify) {
   state.results[sceneId] = await api.searchLocal(
     card.querySelector('[data-field="query"]').value, orientation,
   )
+  expandedCandidates.add(sceneKey(sceneId))
   renderScenes()
   notify(`${sceneId} 素材庫找到 ${state.results[sceneId].length} 個符合素材`)
 }
@@ -143,6 +148,14 @@ export function bindSceneEvents({ notify, refreshProject, refreshLibrary }) {
       if (event.target.dataset.action === "upload") event.target.value = ""
     }
   })
+
+  root.addEventListener("toggle", event => {
+    const details = event.target.closest("details[data-candidates]")
+    if (!details) return
+    const key = sceneKey(details.dataset.candidates)
+    if (details.open) expandedCandidates.add(key)
+    else expandedCandidates.delete(key)
+  }, true)
 
   root.addEventListener("click", async event => {
     const button = event.target.closest("button[data-action]")
