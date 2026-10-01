@@ -37,6 +37,16 @@ class Settings(BaseSettings):
         path.mkdir(parents=True, exist_ok=True)
         return path
 
+    @property
+    def assets_path(self) -> Path:
+        path = DATA_DIR / "assets"
+        path.mkdir(parents=True, exist_ok=True)
+        return path
+
+    @property
+    def library_path(self) -> Path:
+        return DATA_DIR / "library.json"
+
 
 settings = Settings()
 
