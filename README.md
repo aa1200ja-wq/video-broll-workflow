@@ -86,6 +86,8 @@ Windows 預設放在：
 ```text
 BrollWorkflow/
 ├─ .env
+├─ library.json
+├─ assets/
 └─ projects/
    └─ <project-id>/
       ├─ project.json
