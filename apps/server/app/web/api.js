@@ -18,6 +18,7 @@ export const api = {
   projects: () => request("/api/projects"),
   createProject: name => request("/api/projects", json({ name })),
   project: id => request(`/api/projects/${id}`),
+  setFormat: (id, ratio) => request(`/api/projects/${id}/format`, json({ ratio }, "PUT")),
   setScript: (id, script) => request(`/api/projects/${id}/script`, json({ script }, "PUT")),
   updateScene: (id, scene) => request(
     `/api/projects/${id}/scenes/${scene.id}`,
@@ -32,8 +33,8 @@ export const api = {
     `/api/projects/${id}/scene-queries`, json({ queries }, "PUT")),
   searchAll: (id, sources) => request(
     `/api/projects/${id}/search-all`, json({ sources })),
-  search: (q, sources) => request(
-    `/api/search?q=${encodeURIComponent(q)}&sources=${sources.join(",")}`),
+  search: (q, sources, orientation) => request(
+    `/api/search?q=${encodeURIComponent(q)}&sources=${sources.join(",")}&orientation=${orientation}`),
   choose: (id, sceneId, result) => request(
     `/api/projects/${id}/scenes/${sceneId}/download`, json({ result })),
   upload: async (id, sceneId, file) => {
