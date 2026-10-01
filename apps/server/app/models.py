@@ -36,6 +36,10 @@ class CreateProjectRequest(BaseModel):
     name: str
 
 
+class ProjectFormatRequest(BaseModel):
+    ratio: Literal["16:9", "9:16"]
+
+
 class ScriptRequest(BaseModel):
     script: str
 
@@ -88,6 +92,9 @@ class MaterialAsset(BaseModel):
     title: str = ""
     tags: list[str] = Field(default_factory=list)
     search_queries: list[str] = Field(default_factory=list)
+    width: int = 0
+    height: int = 0
+    duration: float = 0
     used_by: list[str] = Field(default_factory=list)
 
 
@@ -96,7 +103,7 @@ class DownloadAssetRequest(BaseModel):
 
 
 class PreviewRequest(BaseModel):
-    burn_subtitles: bool = False
+    burn_subtitles: bool = True
 
 
 class JianyingExportRequest(BaseModel):
