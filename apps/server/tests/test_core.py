@@ -86,6 +86,15 @@ def test_jianying_draft_creation():
         "-q:a", "5", str(audio),
     ])
     draft_root = Path(tempfile.mkdtemp(prefix="jianying-drafts-"))
+    existing = draft_root / "ci-draft"
+    existing.mkdir()
+    (existing / ".locked").write_text("busy", encoding="utf-8")
+
     name = jianying.export_jianying(project, str(draft_root), "ci-draft")
-    assert name == "ci-draft"
-    assert (draft_root / "ci-draft").exists()
+    assert name == "ci-draft_Broll"
+    draft_path = draft_root / name
+    assert draft_path.exists()
+    content = (draft_path / "draft_content.json").read_text(encoding="utf-8")
+    assert "main_video" in content
+    assert "narration" in content
+    assert "caption" in content
