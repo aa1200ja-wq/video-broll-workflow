@@ -17,6 +17,8 @@ const json = (body, method = "POST") => ({
 export const api = {
   projects: () => request("/api/projects"),
   createProject: name => request("/api/projects", json({ name })),
+  renameProject: (id, name) => request(`/api/projects/${id}/name`, json({ name }, "PUT")),
+  deleteProject: id => request(`/api/projects/${id}`, { method: "DELETE" }),
   project: id => request(`/api/projects/${id}`),
   setFormat: (id, ratio) => request(`/api/projects/${id}/format`, json({ ratio }, "PUT")),
   setScript: (id, script) => request(`/api/projects/${id}/script`, json({ script }, "PUT")),
@@ -33,6 +35,8 @@ export const api = {
     `/api/projects/${id}/scene-queries`, json({ queries }, "PUT")),
   searchAll: (id, sources) => request(
     `/api/projects/${id}/search-all`, json({ sources })),
+  searchExternalAll: (id, sources) => request(
+    `/api/projects/${id}/search-external`, json({ sources })),
   search: (q, sources, orientation) => request(
     `/api/search?q=${encodeURIComponent(q)}&sources=${sources.join(",")}&orientation=${orientation}`),
   choose: (id, sceneId, result) => request(
@@ -41,14 +45,24 @@ export const api = {
     const form = new FormData(); form.append("file", file)
     return request(`/api/projects/${id}/scenes/${sceneId}/upload`, { method: "POST", body: form })
   },
+  uploadLibrary: async (file, tags = "") => {
+    const form = new FormData(); form.append("file", file)
+    return request(`/api/library/upload?tags=${encodeURIComponent(tags)}`, { method: "POST", body: form })
+  },
   preview: id => request(`/api/projects/${id}/preview`, json({ burn_subtitles: true })),
   previewUrl: id => `/api/projects/${id}/preview-file?t=${Date.now()}`,
   exportJianying: (id, name) => request(
     `/api/projects/${id}/export/jianying`, json({ draft_folder: "", draft_name: name })),
-  library: (_id, q = "") => request(
-    `/api/library?q=${encodeURIComponent(q)}`),
-  libraryFile: (_id, assetId) =>
-    `/api/library/${encodeURIComponent(assetId)}/file`,
+  library: (q = "", tag = "") => request(
+    `/api/library?q=${encodeURIComponent(q)}&tag=${encodeURIComponent(tag)}`),
+  libraryFile: assetId => `/api/library/${encodeURIComponent(assetId)}/file`,
+  libraryTags: () => request("/api/library/tags"),
+  setAssetTags: (assetId, tags) => request(
+    `/api/library/${encodeURIComponent(assetId)}/tags`, json({ tags }, "PUT")),
+  renameTag: (oldTag, newTag) => request(
+    "/api/library/tags/rename", json({ old: oldTag, new: newTag })),
+  deleteTag: tag => request(
+    `/api/library/tags/${encodeURIComponent(tag)}`, { method: "DELETE" }),
   useLibrary: (id, sceneId, assetId) => request(
     `/api/projects/${id}/scenes/${sceneId}/use-library/${encodeURIComponent(assetId)}`, json({})),
   settings: () => request("/api/settings"),
