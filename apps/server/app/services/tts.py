@@ -1,17 +1,16 @@
 import asyncio
-import subprocess
 from pathlib import Path
 from app.models import Project
+from app.services.ffmpeg_utils import run_ffmpeg
 from app.services.projects import project_path, save_project
 
 
 def _duration(path: Path) -> float:
-    cmd = [
-        "ffprobe", "-v", "error", "-show_entries", "format=duration",
-        "-of", "default=noprint_wrappers=1:nokey=1", str(path),
-    ]
-    value = subprocess.check_output(cmd, text=True).strip()
-    return max(0.1, float(value))
+    try:
+        from mutagen.mp3 import MP3
+        return max(0.1, float(MP3(path).info.length))
+    except Exception as exc:
+        raise RuntimeError(f"無法讀取旁白長度：{path.name}") from exc
 
 
 def _srt_time(seconds: float) -> str:
@@ -26,7 +25,7 @@ async def synthesize(project: Project, voice: str, rate: str, pitch: str) -> Pro
     try:
         import edge_tts
     except ImportError as exc:
-        raise RuntimeError("尚未安裝 edge-tts，請先執行 setup.bat") from exc
+        raise RuntimeError("尚未安裝 edge-tts，請重新執行 START_HERE.cmd") from exc
 
     base = project_path(project.id)
     scene_dir = base / "audio" / "scenes"
@@ -51,11 +50,10 @@ async def synthesize(project: Project, voice: str, rate: str, pitch: str) -> Pro
         "\n".join(f"file '{clip.as_posix()}'" for clip in clips), encoding="utf-8"
     )
     narration = base / "audio" / "narration.mp3"
-    subprocess.run(
-        ["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", str(concat_file),
-         "-c:a", "libmp3lame", "-q:a", "2", str(narration)],
-        check=True, capture_output=True,
-    )
+    run_ffmpeg([
+        "-y", "-f", "concat", "-safe", "0", "-i", str(concat_file),
+        "-c:a", "libmp3lame", "-q:a", "2", str(narration),
+    ])
     lines: list[str] = []
     for i, scene in enumerate(project.scenes, start=1):
         lines.extend([
