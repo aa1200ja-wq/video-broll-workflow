@@ -20,7 +20,7 @@ function candidateCard(item, index, sceneId) {
       <div class="media-body">
         <div class="media-meta">${esc(meta || item.media_type)}</div>
         <button class="primary" data-action="choose" data-scene="${sceneId}" data-index="${index}">
-          ${item.source === "local" ? "使用本機素材" : "下載並使用"}
+          ${item.source === "local" ? "使用素材庫素材" : "下載並使用"}
         </button>
         ${item.page_url ? `<a href="${esc(item.page_url)}" target="_blank" class="media-meta">查看來源</a>` : ""}
       </div>
@@ -33,7 +33,7 @@ function sceneCard(scene) {
     ? `${scene.start.toFixed(1)}–${scene.end.toFixed(1)}s`
     : "尚未產生時間碼"
   const resultBlock = candidates.length ? `
-    <details class="candidate-wrap">
+    <details class="candidate-wrap" open>
       <summary>候選素材 ${candidates.length} 筆</summary>
       <div class="candidates">
         ${candidates.map((item, i) => candidateCard(item, i, scene.id)).join("")}
@@ -46,15 +46,13 @@ function sceneCard(scene) {
         ${scene.selected_asset ? '<span class="ok">已選素材</span>' : ""}
       </div>
       <textarea data-field="narration">${esc(scene.narration)}</textarea>
-      <div class="scene-search">
-        <input data-field="query" value="${esc(scene.search_query)}" placeholder="素材搜尋詞" />
-        <select data-action="asset-menu" class="asset-menu">
-          <option value="">素材操作…</option>
-          <option value="external">搜尋外部素材</option>
-          <option value="library">素材庫</option>
-          <option value="upload">加入本機素材</option>
-        </select>
-        <input data-action="upload" type="file" accept="video/*,image/*" hidden />
+      <input data-field="query" value="${esc(scene.search_query)}" placeholder="素材搜尋詞" />
+      <div class="scene-material-actions">
+        <button data-action="external">搜尋外部素材</button>
+        <button data-action="local" class="ghost">素材庫加入</button>
+        <label class="button-link ghost">加入本機素材
+          <input data-action="upload" type="file" accept="video/*,image/*" hidden />
+        </label>
       </div>
       <div class="scene-actions">
         <button class="ghost" data-action="split">拆分</button>
@@ -90,46 +88,49 @@ async function searchExternal(card, notify) {
   await saveScene(card)
   const sceneId = card.dataset.scene
   const orientation = state.project.width >= state.project.height ? "landscape" : "portrait"
-  notify(`${sceneId} 正在搜尋尚未下載的外部素材…`)
+  notify(`${sceneId} 正在重新搜尋外部素材…`)
   state.results[sceneId] = await api.searchExternal(
     card.querySelector('[data-field="query"]').value,
     selectedSources(), orientation,
   )
   renderScenes()
-  notify(`${sceneId} 找到 ${state.results[sceneId].length} 個新素材`)
+  notify(`${sceneId} 找到 ${state.results[sceneId].length} 個尚未下載的外部素材`)
 }
 
-export function bindSceneEvents({ notify, refreshProject, refreshLibrary, openLibrary }) {
+async function searchLocal(card, notify) {
+  await saveScene(card)
+  const sceneId = card.dataset.scene
+  const orientation = state.project.width >= state.project.height ? "landscape" : "portrait"
+  state.results[sceneId] = await api.searchLocal(
+    card.querySelector('[data-field="query"]').value, orientation,
+  )
+  renderScenes()
+  notify(`${sceneId} 素材庫找到 ${state.results[sceneId].length} 個符合素材`)
+}
+
+export function bindSceneEvents({ notify, refreshProject, refreshLibrary }) {
   const root = document.querySelector("#scene-list")
   root.addEventListener("change", async event => {
     const card = event.target.closest(".scene")
     if (!card || !state.project) return
     try {
-      if (event.target.dataset.action === "asset-menu") {
-        const action = event.target.value
-        event.target.value = ""
-        if (action === "external") await searchExternal(card, notify)
-        if (action === "library") {
-          await saveScene(card)
-          openLibrary(card.dataset.scene, card.querySelector('[data-field="query"]').value)
-        }
-        if (action === "upload") {
-          card.querySelector('[data-action="upload"]').click()
-        }
-        return
-      }
       if (event.target.dataset.action === "upload") {
-        const file = event.target.files?.[0]
+        const input = event.target
+        const file = input.files?.[0]
         if (!file) return
         notify("正在加入本機素材…")
         await api.upload(state.project.id, card.dataset.scene, file)
         await refreshProject()
         await refreshLibrary()
-        notify("素材已加入全域素材庫並套用")
+        notify("素材已加入素材庫並套用；比例不同時會自動裁切")
         return
       }
       if (event.target.dataset.field) await saveScene(card)
-    } catch (err) { notify(err.message, true) }
+    } catch (err) {
+      notify(err.message, true)
+    } finally {
+      if (event.target.dataset.action === "upload") event.target.value = ""
+    }
   })
 
   root.addEventListener("click", async event => {
@@ -139,12 +140,16 @@ export function bindSceneEvents({ notify, refreshProject, refreshLibrary, openLi
     const sceneId = card.dataset.scene
     const scene = getScene(sceneId)
     try {
+      if (button.dataset.action === "external") await searchExternal(card, notify)
+      if (button.dataset.action === "local") await searchLocal(card, notify)
       if (button.dataset.action === "choose") {
         const item = state.results[sceneId]?.[Number(button.dataset.index)]
         if (!item) return
-        notify("正在下載並加入全域素材庫…")
+        notify(item.source === "local" ? "正在套用素材庫素材…" : "正在下載並加入素材庫…")
         await api.choose(state.project.id, sceneId, item)
-        state.results[sceneId] = (state.results[sceneId] || []).filter(x => x.id !== item.id)
+        if (item.source !== "local") {
+          state.results[sceneId] = (state.results[sceneId] || []).filter(x => x.id !== item.id)
+        }
         await refreshProject()
         await refreshLibrary()
         notify(`${sceneId} 已選用素材`)
