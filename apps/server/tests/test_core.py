@@ -1,3 +1,4 @@
+import json
 import os
 import tempfile
 from pathlib import Path
@@ -104,8 +105,10 @@ def test_jianying_draft_creation():
     draft_path = draft_root / name
     assert draft_path.exists()
     content = (draft_path / "draft_content.json").read_text(encoding="utf-8")
-    assert "main_video" in content
-    assert "narration" in content
-    assert "caption" in content
+    data = json.loads(content)
+    tracks = {track.get("name"): track for track in data["tracks"]}
+    assert len(tracks["main_video"]["segments"]) == 1
+    assert len(tracks["narration"]["segments"]) == 1
+    assert len(tracks["caption"]["segments"]) == 1
     assert "測試字幕" in content
-    assert "\"duration\": 1017000" in content
+    assert data["duration"] >= 1_017_000
