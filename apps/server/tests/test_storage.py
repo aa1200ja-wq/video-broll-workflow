@@ -27,6 +27,22 @@ def test_material_library_can_move_to_custom_folder():
     library.upsert_asset(asset)
 
     target = Path(tempfile.mkdtemp(prefix="broll-library-target-"))
+    target_assets = target / "assets"
+    target_assets.mkdir(parents=True, exist_ok=True)
+    existing_file = target_assets / "existing.jpg"
+    existing_file.write_bytes(b"existing")
+    (target / "library.json").write_text(
+        json.dumps([MaterialAsset(
+            id="existing",
+            media_type="image",
+            local_path=str(existing_file.resolve()),
+            title="existing",
+            width=100,
+            height=100,
+        ).model_dump()], ensure_ascii=False),
+        encoding="utf-8",
+    )
+
     response = client.put(
         "/api/settings",
         json={"material_library_dir": str(target)},
@@ -42,3 +58,4 @@ def test_material_library_can_move_to_custom_folder():
     entry = next(item for item in index if item["id"] == "move-test")
     assert Path(entry["local_path"]) == moved.resolve()
     assert library.find_asset("move-test") is not None
+    assert library.find_asset("existing") is not None
