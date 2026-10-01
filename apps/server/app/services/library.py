@@ -6,15 +6,15 @@ from app.services.projects import list_projects, save_project
 
 
 def load_library() -> list[MaterialAsset]:
-    _migrate_legacy()
-    path = settings.library_path
-    if not path.exists():
-        return []
-    try:
-        raw = json.loads(path.read_text(encoding="utf-8"))
-        return [MaterialAsset.model_validate(item) for item in raw]
-    except (ValueError, json.JSONDecodeError):
-        return []
+    items, changed = _load_global()
+    items, merged = _merge_legacy(items)
+    changed = changed or merged
+    for item in items:
+        if _hydrate(item):
+            changed = True
+    if changed:
+        save_library(items)
+    return items
 
 
 def save_library(items: list[MaterialAsset]) -> list[MaterialAsset]:
@@ -33,15 +33,11 @@ def upsert_asset(asset: MaterialAsset) -> MaterialAsset:
     items = load_library()
     old = next((x for x in items if x.id == asset.id), None)
     if old:
-        old.local_path = asset.local_path
-        old.source_url = asset.source_url or old.source_url
-        old.author = asset.author or old.author
-        old.title = asset.title or old.title
-        old.tags = _merge(old.tags, asset.tags)
-        old.search_queries = _merge(old.search_queries, asset.search_queries)
+        _merge_asset(old, asset)
         asset = old
     else:
         items.append(asset)
+    _hydrate(asset)
     save_library(items)
     return asset
 
@@ -53,33 +49,110 @@ def list_library(query: str = "") -> list[MaterialAsset]:
         item.used_by = usage.get(str(Path(item.local_path)), [])
     if not query.strip():
         return items
-    ranked = _ranked(items, query)
-    return [item for _, item in ranked]
+    return [item for _, item in _ranked(items, query)]
 
 
-def search_results(query: str, limit: int = 12) -> list[SearchResult]:
-    ranked = _ranked(load_library(), query)[:limit]
-    return [
-        SearchResult(
+def search_results(query: str, orientation: str = "", limit: int = 12) -> list[SearchResult]:
+    ranked = _ranked(load_library(), query)
+    output = []
+    for _, item in ranked:
+        if not Path(item.local_path).exists() or not _orientation_ok(item, orientation):
+            continue
+        output.append(SearchResult(
             id=item.id, source="local", media_type=item.media_type,
             preview_url=f"/api/library/{item.id}/file",
             download_url=f"local://{item.id}", page_url=item.source_url,
             author=item.author, title=item.title, tags=item.tags,
-        )
-        for _, item in ranked
-        if Path(item.local_path).exists()
-    ]
+            width=item.width, height=item.height, duration=item.duration,
+        ))
+        if len(output) >= limit:
+            break
+    return output
 
 
 def assign_asset(project: Project, scene: Scene, asset: MaterialAsset) -> Project:
     if not Path(asset.local_path).exists():
         raise FileNotFoundError("素材檔案不存在")
+    expected = "landscape" if project.width >= project.height else "portrait"
+    if not _orientation_ok(asset, expected):
+        actual = "橫式" if asset.width >= asset.height else "直式"
+        wanted = "橫式" if expected == "landscape" else "直式"
+        raise ValueError(f"素材是{actual}，目前專案設定為{wanted}，請換素材或切換專案比例")
     scene.selected_asset = asset.local_path
     scene.selected_asset_type = asset.media_type
     scene.source_name = asset.source
     scene.source_url = asset.source_url or None
     scene.status = "asset_selected"
     return save_project(project)
+
+
+def _load_global():
+    path = settings.library_path
+    if not path.exists():
+        return [], False
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8"))
+        return [MaterialAsset.model_validate(item) for item in raw], False
+    except (ValueError, json.JSONDecodeError):
+        return [], True
+
+
+def _merge_legacy(items: list[MaterialAsset]):
+    by_id = {item.id: item for item in items}
+    changed = False
+    for path in settings.projects_path.glob("*/library.json"):
+        try:
+            raw = json.loads(path.read_text(encoding="utf-8"))
+        except (ValueError, json.JSONDecodeError):
+            continue
+        for row in raw:
+            try:
+                incoming = MaterialAsset.model_validate(row)
+            except ValueError:
+                continue
+            if incoming.id in by_id:
+                before = by_id[incoming.id].model_dump()
+                _merge_asset(by_id[incoming.id], incoming)
+                changed |= before != by_id[incoming.id].model_dump()
+            else:
+                by_id[incoming.id] = incoming
+                changed = True
+    return list(by_id.values()), changed
+
+
+def _merge_asset(old: MaterialAsset, new: MaterialAsset):
+    if new.local_path and Path(new.local_path).exists():
+        old.local_path = new.local_path
+    old.source_url = new.source_url or old.source_url
+    old.author = new.author or old.author
+    old.title = new.title or old.title
+    old.tags = _merge(old.tags, new.tags)
+    old.search_queries = _merge(old.search_queries, new.search_queries)
+    old.width = new.width or old.width
+    old.height = new.height or old.height
+    old.duration = new.duration or old.duration
+
+
+def _hydrate(item: MaterialAsset) -> bool:
+    if item.width and item.height:
+        return False
+    path = Path(item.local_path)
+    if not path.exists():
+        return False
+    try:
+        import pyJianYingDraft as draft
+        material = draft.VideoMaterial(str(path))
+        item.width, item.height = material.width, material.height
+        item.duration = material.duration / 1_000_000
+        return True
+    except Exception:
+        return False
+
+
+def _orientation_ok(item, orientation: str) -> bool:
+    if not orientation or not item.width or not item.height:
+        return True
+    return (item.width >= item.height) == (orientation == "landscape")
 
 
 def _ranked(items: list[MaterialAsset], query: str):
@@ -122,26 +195,3 @@ def _merge(left: list[str], right: list[str]) -> list[str]:
             seen.add(key)
             result.append(clean)
     return result
-
-
-def _migrate_legacy() -> None:
-    if settings.library_path.exists():
-        return
-    merged: list[MaterialAsset] = []
-    for path in settings.projects_path.glob("*/library.json"):
-        try:
-            raw = json.loads(path.read_text(encoding="utf-8"))
-            merged.extend(MaterialAsset.model_validate(x) for x in raw)
-        except (ValueError, json.JSONDecodeError):
-            continue
-    if not merged:
-        return
-    deduped: dict[str, MaterialAsset] = {}
-    for item in merged:
-        if item.id not in deduped:
-            deduped[item.id] = item
-        else:
-            old = deduped[item.id]
-            old.tags = _merge(old.tags, item.tags)
-            old.search_queries = _merge(old.search_queries, item.search_queries)
-    save_library(list(deduped.values()))
