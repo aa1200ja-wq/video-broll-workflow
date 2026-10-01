@@ -20,6 +20,8 @@ function renderProjects() {
   $("#project-list").innerHTML = state.projects.map(project => `
     <button class="project-item ${state.project?.id === project.id ? "active" : ""}"
       data-project="${project.id}">${project.name}</button>`).join("")
+  $("#project-manager-summary").textContent = state.project
+    ? `專案管理｜${state.project.name}` : "專案管理"
 }
 
 function renderProject() {
@@ -41,7 +43,7 @@ async function loadProjects(selectFirst = true) {
   if (selectFirst && !state.project && state.projects.length) {
     await selectProject(state.projects[0].id); return
   }
-  renderProjects()
+  renderProject()
 }
 
 async function selectProject(id) {
