@@ -24,6 +24,12 @@ jobs:
           PYTHONPATH: apps/server
         run: |
           python -m compileall -q apps/server
+          node --check apps/server/app/web/api.js
+          node --check apps/server/app/web/state.js
+          node --check apps/server/app/web/scenes.js
+          node --check apps/server/app/web/library.js
+          node --check apps/server/app/web/settings.js
+          node --check apps/server/app/web/main.js
           pytest -q apps/server/tests
 
   windows-package:
