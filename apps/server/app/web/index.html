@@ -101,11 +101,13 @@
         <div class="panel">
           <h2>5. 輸出</h2>
           <div class="toolbar wrap">
+            <button id="preflight-check">輸出前檢查</button>
             <button id="make-preview">產生粗剪預覽</button>
             <a id="open-preview" class="button-link disabled" target="_blank">開啟粗剪</a>
             <button id="export-jianying" class="primary">建立剪映草稿</button>
           </div>
-          <p class="hint">最終主要輸出是可繼續編輯的剪映草稿；粗剪 MP4 只用來快速檢查。</p>
+          <div id="preflight-result" class="preflight-result hidden"></div>
+          <p class="hint">輸出前檢查會逐幕確認素材、時間碼與旁白；剪映草稿輸出也會自動再檢查一次。</p>
         </div>
       </section>
 
