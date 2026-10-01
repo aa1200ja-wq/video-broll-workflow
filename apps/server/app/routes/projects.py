@@ -99,6 +99,8 @@ def update_scene(project_id: str, scene_id: str, body: SceneUpdateRequest):
         scene.narration = body.narration.strip()
     if body.search_query is not None:
         scene.search_query = body.search_query.strip()
+    if body.rhythm is not None:
+        scene.rhythm = body.rhythm
     return projects.save_project(project)
 
 
@@ -158,7 +160,10 @@ def split_scene(project_id: str, scene_id: str, body: SplitSceneRequest):
     left, right = scene.narration[:pos].strip(), scene.narration[pos:].strip()
     scene.narration = left
     from app.models import Scene
-    project.scenes.insert(idx + 1, Scene(id="new", order=idx + 2, narration=right))
+    project.scenes.insert(
+        idx + 1,
+        Scene(id="new", order=idx + 2, narration=right, rhythm=scene.rhythm),
+    )
     return projects.renumber(project)
 
 
