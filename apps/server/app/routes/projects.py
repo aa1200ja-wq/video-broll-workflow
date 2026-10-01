@@ -5,7 +5,7 @@ from fastapi.responses import FileResponse
 from app.config import settings
 from app.models import (
     BulkQueriesRequest, BulkSearchRequest, CreateProjectRequest, ProjectFormatRequest,
-    ProjectNameRequest, DownloadAssetRequest, JianyingExportRequest, PreviewRequest,
+    DownloadAssetRequest, JianyingExportRequest, PreviewRequest,
     SceneUpdateRequest, ScriptRequest, SplitSceneRequest, TTSRequest,
 )
 from app.services import jianying, library, media, preview, projects, search, tts
@@ -60,23 +60,6 @@ def create_project(body: CreateProjectRequest):
 @router.get("/projects/{project_id}")
 def get_project(project_id: str):
     return _load(project_id)
-
-
-@router.put("/projects/{project_id}/name")
-def rename_project(project_id: str, body: ProjectNameRequest):
-    try:
-        return projects.rename_project(project_id, body.name)
-    except FileNotFoundError as exc:
-        raise HTTPException(404, "找不到專案") from exc
-
-
-@router.delete("/projects/{project_id}")
-def delete_project(project_id: str):
-    try:
-        projects.delete_project(project_id)
-        return {"ok": True}
-    except FileNotFoundError as exc:
-        raise HTTPException(404, "找不到專案") from exc
 
 
 @router.put("/projects/{project_id}/format")
