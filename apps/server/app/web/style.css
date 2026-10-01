@@ -120,3 +120,14 @@ label > input { margin-top: 6px; }
 @media (max-width: 760px) {
   .scene-rhythm { margin-left: 0; width: 100%; justify-content: flex-end; }
 }
+
+.preflight-result {
+  margin-top: 12px; padding: 12px 14px; border-radius: 10px;
+  border: 1px solid #3a414d; background: #20242b;
+}
+.preflight-result strong { color: #fff; }
+.preflight-result ul { margin: 8px 0 0; padding-left: 20px; }
+.preflight-result li { margin: 4px 0; }
+.preflight-counts { margin-top: 6px; color: #c6cbd4; }
+.preflight-ok { border-color: #315b41; background: #18271e; }
+.preflight-bad { border-color: #6d3b3b; background: #2a1d1f; }
