@@ -23,10 +23,17 @@ label > input { margin-top: 6px; }
 .brand { display: grid; gap: 3px; margin-bottom: 18px; }
 .brand strong { font-size: 18px; }
 .brand small, .hint, .panel-head span, #project-meta { color: #949aa6; }
-.create-project { display: grid; grid-template-columns: 1fr auto; gap: 8px; margin-bottom: 14px; }
-.project-list { display: grid; gap: 5px; }
+.side-menu { display: grid; gap: 7px; margin-bottom: 14px; }
+.side-action { width: 100%; text-align: left; background: #20242b; color: #eef0f3; }
+.side-action:hover { background: #2a3039; }
+.project-manager { border-top: 1px solid #2b3038; padding-top: 12px; }
+.project-manager summary, .tag-manager summary { cursor: pointer; color: #d9dde4; }
+.create-project { display: grid; grid-template-columns: 1fr auto; gap: 8px; margin: 12px 0; }
+.project-list { display: grid; gap: 5px; max-height: 280px; overflow: auto; }
 .project-item { text-align: left; background: transparent; color: #c8ccd4; }
 .project-item.active { background: #2b3039; color: #fff; }
+.project-tools { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-top: 10px; }
+.danger { background: #5a2529; color: #ffdadd; }
 .main { padding: 22px; min-width: 0; }
 .topbar { display: flex; gap: 16px; justify-content: space-between; align-items: center; margin-bottom: 18px; }
 .topbar h1 { margin: 0 0 4px; font-size: 24px; }
@@ -65,6 +72,16 @@ label > input { margin-top: 6px; }
 .media-meta { color: #a7adb7; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tag-row { display: flex; gap: 5px; flex-wrap: wrap; }
 .tag { font-size: 11px; background: #343a44; color: #cdd1d8; border-radius: 999px; padding: 3px 7px; }
+.tag.custom { background: #24466e; color: #dbeaff; }
+.library-tools { margin-top: 10px; align-items: end; }
+.compact-label { min-width: 190px; font-size: 12px; }
+.compact-label select { margin-top: 4px; }
+.tag-manager { position: relative; }
+.tag-manager-body {
+  position: absolute; z-index: 12; top: 34px; left: 0; width: 320px;
+  display: grid; gap: 8px; padding: 10px; background: #20242b;
+  border: 1px solid #343a44; border-radius: 10px; box-shadow: 0 12px 30px #0007;
+}
 .ok { color: #80d5a1 !important; }
 .error { color: #ff9e9e; }
 .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
