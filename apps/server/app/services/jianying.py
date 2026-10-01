@@ -1,4 +1,5 @@
 from pathlib import Path
+from app.config import settings
 from app.models import Project
 from app.services.preview import build_scene_clips
 from app.services.projects import project_path
@@ -8,14 +9,20 @@ def export_jianying(project: Project, draft_folder: str, draft_name: str | None 
     try:
         import pyJianYingDraft as draft
     except ImportError as exc:
-        raise RuntimeError("尚未安裝 pyJianYingDraft，請先執行 setup.bat") from exc
+        raise RuntimeError("剪映草稿元件未安裝，請重新啟動工具") from exc
 
-    root = Path(draft_folder)
+    if not project.scenes or any(scene.end <= scene.start for scene in project.scenes):
+        raise ValueError("請先完成旁白與時間碼")
+    target_folder = draft_folder.strip() or settings.jianying_draft_dir.strip()
+    if not target_folder:
+        raise ValueError("請先在設定中指定剪映草稿資料夾")
+    root = Path(target_folder)
     if not root.exists():
         raise ValueError("剪映草稿資料夾不存在")
+
     base = project_path(project.id)
     clips = build_scene_clips(project)
-    name = draft_name or project.name
+    name = (draft_name or project.name).strip() or "B-roll Workflow"
     folder = draft.DraftFolder(str(root))
     script = folder.create_draft(name, project.width, project.height, allow_replace=True)
     script.append_tracks([
@@ -25,14 +32,15 @@ def export_jianying(project: Project, draft_folder: str, draft_name: str | None 
     ])
     for scene, clip in zip(project.scenes, clips):
         timerange = draft.trange_seconds(scene.start, duration=scene.duration)
-        segment = draft.VideoSegment(str(clip), timerange)
-        script.add_segment(segment, "main_video")
-        text = draft.TextSegment(scene.narration, timerange)
-        script.add_segment(text, "caption")
+        script.add_segment(draft.VideoSegment(str(clip), timerange), "main_video")
+        script.add_segment(draft.TextSegment(scene.narration, timerange), "caption")
+
     narration = base / "audio" / "narration.mp3"
-    total = project.scenes[-1].end if project.scenes else 0
-    if narration.exists() and total > 0:
-        audio = draft.AudioSegment(str(narration), draft.trange_seconds(0, duration=total))
-        script.add_segment(audio, "narration")
+    total = project.scenes[-1].end
+    if narration.exists():
+        script.add_segment(
+            draft.AudioSegment(str(narration), draft.trange_seconds(0, duration=total)),
+            "narration",
+        )
     script.save()
     return name
