@@ -38,8 +38,13 @@ def export_jianying(project: Project, draft_folder: str, draft_name: str | None 
     narration = base / "audio" / "narration.mp3"
     total = project.scenes[-1].end
     if narration.exists():
+        from mutagen.mp3 import MP3
+        audio_duration = min(total, float(MP3(narration).info.length))
         script.add_segment(
-            draft.AudioSegment(str(narration), draft.trange_seconds(0, duration=total)),
+            draft.AudioSegment(
+                str(narration),
+                draft.trange_seconds(0, duration=max(0.1, audio_duration)),
+            ),
             "narration",
         )
     script.save()
