@@ -9,6 +9,7 @@ class Scene(BaseModel):
     start: float = 0
     end: float = 0
     search_query: str = ""
+    rhythm: Literal["inherit", "natural", "fast"] = "inherit"
     selected_asset: str | None = None
     selected_asset_type: Literal["video", "image"] | None = None
     source_name: str | None = None
@@ -52,6 +53,7 @@ class ScriptRequest(BaseModel):
 class SceneUpdateRequest(BaseModel):
     narration: str | None = None
     search_query: str | None = None
+    rhythm: Literal["inherit", "natural", "fast"] | None = None
 
 
 class BulkQueriesRequest(BaseModel):
