@@ -189,3 +189,32 @@ def test_fast_rhythm_trims_leading_and_trailing_silence():
     tts._tighten_audio(source, target)
     after = tts._duration(target)
     assert after < before - 0.3
+
+
+def test_scene_rhythm_override_and_split_persistence():
+    project = projects.create_project("rhythm-scenes")
+    project.script = "短句。這是一個比較長的句子。"
+    project = projects.split_script(project)
+
+    response = client.put(
+        f"/api/projects/{project.id}/scenes/S001",
+        json={"narration": project.scenes[0].narration, "search_query": "", "rhythm": "fast"},
+    )
+    assert response.status_code == 200
+    updated = response.json()
+    assert updated["scenes"][0]["rhythm"] == "fast"
+
+    split = client.post(
+        f"/api/projects/{project.id}/scenes/S001/split",
+        json={"position": 1},
+    )
+    assert split.status_code == 200
+    assert split.json()["scenes"][0]["rhythm"] == "fast"
+    assert split.json()["scenes"][1]["rhythm"] == "fast"
+
+    fast_scene = Scene(id="x", order=1, narration="x", rhythm="fast")
+    natural_scene = Scene(id="y", order=2, narration="y", rhythm="natural")
+    inherit_scene = Scene(id="z", order=3, narration="z", rhythm="inherit")
+    assert tts._effective_rhythm(fast_scene, "natural") == "fast"
+    assert tts._effective_rhythm(natural_scene, "fast") == "natural"
+    assert tts._effective_rhythm(inherit_scene, "fast") == "fast"
