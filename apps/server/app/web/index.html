@@ -63,12 +63,19 @@
 
         <div class="panel">
           <h2>2. 產生旁白＋時間碼</h2>
-          <div class="grid-4">
+          <div class="grid-5">
             <label>聲音<input id="voice" value="zh-TW-YunJheNeural" /></label>
             <label>語速<input id="rate" value="+0%" /></label>
             <label>音調<input id="pitch" value="+0Hz" /></label>
+            <label>節奏
+              <select id="rhythm">
+                <option value="natural">自然</option>
+                <option value="fast">快切</option>
+              </select>
+            </label>
             <button id="make-tts" class="primary">產生旁白＋時間碼</button>
           </div>
+          <p class="hint">快切模式會去掉每句旁白前後多餘靜音，短句會更緊湊；不會截掉說話內容。</p>
         </div>
 
         <div class="panel">
