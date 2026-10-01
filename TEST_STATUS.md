@@ -43,3 +43,5 @@
 7. 剪映專業版 6.0.1 開啟新草稿。
 
 只有 Windows 實際剪映開啟結果無法在 GitHub Linux 測試環境代替。
+
+- V3 candidate: global library, local-first search, burned preview subtitles, Jianying duration-safe export.
