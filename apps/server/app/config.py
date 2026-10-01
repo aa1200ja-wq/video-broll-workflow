@@ -1,3 +1,4 @@
+import json
 import os
 from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -52,12 +53,13 @@ def save_settings(
     if jianying_draft_dir is not None:
         settings.jianying_draft_dir = jianying_draft_dir.strip()
 
+    q = lambda value: json.dumps(str(value), ensure_ascii=False)
     lines = [
-        f"PEXELS_API_KEY={settings.pexels_api_key}",
-        f"PIXABAY_API_KEY={settings.pixabay_api_key}",
-        f"PROJECTS_DIR={settings.projects_dir}",
-        f"DEFAULT_VOICE={settings.default_voice}",
-        f"JIANYING_DRAFT_DIR={settings.jianying_draft_dir}",
+        f"PEXELS_API_KEY={q(settings.pexels_api_key)}",
+        f"PIXABAY_API_KEY={q(settings.pixabay_api_key)}",
+        f"PROJECTS_DIR={q(settings.projects_dir)}",
+        f"DEFAULT_VOICE={q(settings.default_voice)}",
+        f"JIANYING_DRAFT_DIR={q(settings.jianying_draft_dir)}",
     ]
     ENV_PATH.write_text("\n".join(lines) + "\n", encoding="utf-8")
     return settings
