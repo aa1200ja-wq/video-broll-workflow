@@ -8,7 +8,7 @@ from app.models import (
     DownloadAssetRequest, JianyingExportRequest, PreviewRequest,
     SceneUpdateRequest, ScriptRequest, SplitSceneRequest, TTSRequest,
 )
-from app.services import jianying, library, media, preview, projects, search, tts
+from app.services import jianying, library, media, preflight, preview, projects, search, tts
 
 router = APIRouter(prefix="/api")
 
@@ -243,8 +243,14 @@ def preview_file(project_id: str):
 
 @router.post("/projects/{project_id}/export/jianying")
 def export_jy(project_id: str, body: JianyingExportRequest):
+    project = _load(project_id)
+    report = preflight.inspect_project(project)
+    if not report["ready"]:
+        raise HTTPException(
+            400, "輸出前檢查未通過：" + preflight.missing_summary(report)
+        )
     try:
-        name = jianying.export_jianying(_load(project_id), body.draft_folder, body.draft_name)
+        name = jianying.export_jianying(project, body.draft_folder, body.draft_name)
         return {"ok": True, "draft_name": name}
     except Exception as exc:
         raise HTTPException(500, str(exc)) from exc
