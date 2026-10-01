@@ -40,14 +40,14 @@ export const api = {
     const form = new FormData(); form.append("file", file)
     return request(`/api/projects/${id}/scenes/${sceneId}/upload`, { method: "POST", body: form })
   },
-  preview: id => request(`/api/projects/${id}/preview`, json({ burn_subtitles: false })),
+  preview: id => request(`/api/projects/${id}/preview`, json({ burn_subtitles: true })),
   previewUrl: id => `/api/projects/${id}/preview-file?t=${Date.now()}`,
   exportJianying: (id, name) => request(
     `/api/projects/${id}/export/jianying`, json({ draft_folder: "", draft_name: name })),
-  library: (id, q = "") => request(
-    `/api/projects/${id}/library?q=${encodeURIComponent(q)}`),
-  libraryFile: (id, assetId) =>
-    `/api/projects/${id}/library/${encodeURIComponent(assetId)}/file`,
+  library: (_id, q = "") => request(
+    `/api/library?q=${encodeURIComponent(q)}`),
+  libraryFile: (_id, assetId) =>
+    `/api/library/${encodeURIComponent(assetId)}/file`,
   useLibrary: (id, sceneId, assetId) => request(
     `/api/projects/${id}/scenes/${sceneId}/use-library/${encodeURIComponent(assetId)}`, json({})),
   settings: () => request("/api/settings"),
