@@ -20,12 +20,19 @@ def _unique_name(root: Path, requested: str) -> str:
     return f"{base}_{index}"
 
 
-def _video_segment(draft, clip: Path, scene):
+def _safe_video_segment(draft, clip: Path, scene):
     material = draft.VideoMaterial(str(clip))
     target = draft.trange(f"{scene.start}s", f"{scene.duration}s")
     source_duration = min(material.duration, target.duration)
     source = draft.Timerange(0, max(1, source_duration))
     return draft.VideoSegment(material, target, source_timerange=source)
+
+
+def _safe_audio_segment(draft, narration: Path, total: float):
+    material = draft.AudioMaterial(str(narration))
+    target = draft.trange("0s", f"{max(0.1, total)}s")
+    source = draft.Timerange(0, max(1, min(material.duration, target.duration)))
+    return draft.AudioSegment(material, target, source_timerange=source)
 
 
 def export_jianying(project: Project, draft_folder: str, draft_name: str | None = None) -> str:
@@ -60,19 +67,13 @@ def export_jianying(project: Project, draft_folder: str, draft_name: str | None 
         ])
         for scene, clip in zip(project.scenes, clips):
             timerange = draft.trange(f"{scene.start}s", f"{scene.duration}s")
-            script.add_segment(_video_segment(draft, clip, scene), "main_video")
+            script.add_segment(_safe_video_segment(draft, clip, scene), "main_video")
             script.add_segment(draft.TextSegment(scene.narration, timerange), "caption")
 
         narration = base / "audio" / "narration.mp3"
-        total = project.scenes[-1].end
         if narration.exists():
-            from mutagen.mp3 import MP3
-            audio_duration = min(total, float(MP3(narration).info.length))
             script.add_segment(
-                draft.AudioSegment(
-                    str(narration),
-                    draft.trange("0s", f"{max(0.1, audio_duration)}s"),
-                ),
+                _safe_audio_segment(draft, narration, project.scenes[-1].end),
                 "narration",
             )
         script.save()
