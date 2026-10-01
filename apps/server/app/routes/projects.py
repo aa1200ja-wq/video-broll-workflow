@@ -5,7 +5,7 @@ from fastapi.responses import FileResponse
 from app.config import settings
 from app.models import (
     BulkQueriesRequest, BulkSearchRequest, CreateProjectRequest, ProjectFormatRequest,
-    DownloadAssetRequest, JianyingExportRequest, PreviewRequest,
+    ProjectNameRequest, DownloadAssetRequest, JianyingExportRequest, PreviewRequest,
     SceneUpdateRequest, ScriptRequest, SplitSceneRequest, TTSRequest,
 )
 from app.services import jianying, library, media, preview, projects, search, tts
@@ -62,36 +62,28 @@ def get_project(project_id: str):
     return _load(project_id)
 
 
+@router.put("/projects/{project_id}/name")
+def rename_project(project_id: str, body: ProjectNameRequest):
+    try:
+        return projects.rename_project(project_id, body.name)
+    except FileNotFoundError as exc:
+        raise HTTPException(404, "找不到專案") from exc
+
+
+@router.delete("/projects/{project_id}")
+def delete_project(project_id: str):
+    try:
+        projects.delete_project(project_id)
+        return {"ok": True}
+    except FileNotFoundError as exc:
+        raise HTTPException(404, "找不到專案") from exc
+
+
 @router.put("/projects/{project_id}/format")
 def set_format(project_id: str, body: ProjectFormatRequest):
     project = _load(project_id)
     project.width, project.height = ((1920, 1080) if body.ratio == "16:9" else (1080, 1920))
     return projects.save_project(project)
-
-
-@router.get("/library")
-def global_library(q: str = ""):
-    return library.list_library(q)
-
-
-@router.get("/library/{asset_id}/file")
-def global_material_file(asset_id: str):
-    asset = library.find_asset(asset_id)
-    if not asset or not Path(asset.local_path).exists():
-        raise HTTPException(404, "找不到素材檔案")
-    return FileResponse(asset.local_path)
-
-
-@router.get("/projects/{project_id}/library")
-def material_library(project_id: str, q: str = ""):
-    _load(project_id)
-    return library.list_library(q)
-
-
-@router.get("/projects/{project_id}/library/{asset_id}/file")
-def material_file(project_id: str, asset_id: str):
-    _load(project_id)
-    return global_material_file(asset_id)
 
 
 @router.post("/projects/{project_id}/scenes/{scene_id}/use-library/{asset_id}")
@@ -148,6 +140,23 @@ async def search_all_scenes(project_id: str, body: BulkSearchRequest):
         local_items = library.search_results(query, orientation)
         remote_items = await search.search_all(query, body.sources, orientation)
         return scene.id, _prefer_local(local_items, remote_items)
+
+    pairs = await asyncio.gather(*(search_scene(scene) for scene in project.scenes))
+    return {scene_id: results for scene_id, results in pairs}
+
+
+@router.post("/projects/{project_id}/search-external")
+async def search_external_scenes(project_id: str, body: BulkSearchRequest):
+    project = _load(project_id)
+    downloaded = library.asset_ids()
+    orientation = "landscape" if project.width >= project.height else "portrait"
+
+    async def search_scene(scene):
+        query = scene.search_query.strip()
+        if not query:
+            return scene.id, []
+        results = await search.search_all(query, body.sources, orientation)
+        return scene.id, [item for item in results if item.id not in downloaded]
 
     pairs = await asyncio.gather(*(search_scene(scene) for scene in project.scenes))
     return {scene_id: results for scene_id, results in pairs}
