@@ -104,6 +104,8 @@ def use_library_asset(project_id: str, scene_id: str, asset_id: str):
         return library.assign_asset(project, _scene(project, scene_id), asset)
     except FileNotFoundError as exc:
         raise HTTPException(404, str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
 
 
 @router.put("/projects/{project_id}/script")
