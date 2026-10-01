@@ -1,6 +1,8 @@
 import { api } from "./api.js"
 import { state, selectedSources } from "./state.js"
 
+let activeAudio = null
+
 const esc = value => String(value ?? "").replace(/[&<>"']/g, ch => ({
   "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;"
 }[ch]))
@@ -62,6 +64,7 @@ function sceneCard(scene) {
         </label>
       </div>
       <div class="scene-actions">
+        <button class="ghost" data-action="play-audio">▶ 播放旁白</button>
         <button class="ghost" data-action="split">拆分</button>
         <button class="ghost" data-action="merge">併下一幕</button>
       </div>
@@ -148,6 +151,12 @@ export function bindSceneEvents({ notify, refreshProject, refreshLibrary }) {
     const sceneId = card.dataset.scene
     const scene = getScene(sceneId)
     try {
+      if (button.dataset.action === "play-audio") {
+        if (activeAudio) activeAudio.pause()
+        activeAudio = new Audio(api.sceneAudioUrl(state.project.id, sceneId))
+        await activeAudio.play()
+        notify(`${sceneId} 正在播放旁白`)
+      }
       if (button.dataset.action === "external") await searchExternal(card, notify)
       if (button.dataset.action === "local") await searchLocal(card, notify)
       if (button.dataset.action === "choose") {
