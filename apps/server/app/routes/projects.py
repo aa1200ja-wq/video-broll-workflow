@@ -27,6 +27,17 @@ def _scene(project, scene_id: str):
     return scene
 
 
+def _prefer_local(local_items, remote_items):
+    seen = set()
+    output = []
+    for item in [*local_items, *remote_items]:
+        if item.id in seen:
+            continue
+        seen.add(item.id)
+        output.append(item)
+    return output
+
+
 @router.get("/health")
 def health():
     return {
@@ -51,23 +62,35 @@ def get_project(project_id: str):
     return _load(project_id)
 
 
-@router.get("/projects/{project_id}/library")
-def material_library(project_id: str, q: str = ""):
-    return library.list_library(_load(project_id), q)
+@router.get("/library")
+def global_library(q: str = ""):
+    return library.list_library(q)
 
 
-@router.get("/projects/{project_id}/library/{asset_id}/file")
-def material_file(project_id: str, asset_id: str):
-    asset = library.find_asset(project_id, asset_id)
+@router.get("/library/{asset_id}/file")
+def global_material_file(asset_id: str):
+    asset = library.find_asset(asset_id)
     if not asset or not Path(asset.local_path).exists():
         raise HTTPException(404, "找不到素材檔案")
     return FileResponse(asset.local_path)
 
 
+@router.get("/projects/{project_id}/library")
+def material_library(project_id: str, q: str = ""):
+    _load(project_id)
+    return library.list_library(q)
+
+
+@router.get("/projects/{project_id}/library/{asset_id}/file")
+def material_file(project_id: str, asset_id: str):
+    _load(project_id)
+    return global_material_file(asset_id)
+
+
 @router.post("/projects/{project_id}/scenes/{scene_id}/use-library/{asset_id}")
 def use_library_asset(project_id: str, scene_id: str, asset_id: str):
     project = _load(project_id)
-    asset = library.find_asset(project_id, asset_id)
+    asset = library.find_asset(asset_id)
     if not asset:
         raise HTTPException(404, "找不到素材")
     try:
@@ -109,10 +132,12 @@ async def search_all_scenes(project_id: str, body: BulkSearchRequest):
     project = _load(project_id)
 
     async def search_scene(scene):
-        if not scene.search_query.strip():
+        query = scene.search_query.strip()
+        if not query:
             return scene.id, []
-        results = await search.search_all(scene.search_query, body.sources)
-        return scene.id, results
+        local_items = library.search_results(query)
+        remote_items = await search.search_all(query, body.sources)
+        return scene.id, _prefer_local(local_items, remote_items)
 
     pairs = await asyncio.gather(*(search_scene(scene) for scene in project.scenes))
     return {scene_id: results for scene_id, results in pairs}
@@ -163,7 +188,9 @@ async def asset_search(q: str, sources: str = "pexels,pixabay,wikimedia"):
     if not q.strip():
         return []
     try:
-        return await search.search_all(q.strip(), [x for x in sources.split(",") if x])
+        local_items = library.search_results(q.strip())
+        remote_items = await search.search_all(q.strip(), [x for x in sources.split(",") if x])
+        return _prefer_local(local_items, remote_items)
     except Exception as exc:
         raise HTTPException(502, str(exc)) from exc
 
