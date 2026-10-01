@@ -3,9 +3,10 @@ from urllib.parse import urlparse
 import uuid
 import httpx
 from fastapi import UploadFile
+from app.config import settings
 from app.models import MaterialAsset, Project, Scene, SearchResult
 from app.services import library
-from app.services.projects import project_path, save_project
+from app.services.projects import save_project
 
 
 _ALLOWED_HOST_BITS = ("pexels.com", "pixabay.com", "wikimedia.org", "wikimediausercontent.com")
@@ -25,27 +26,30 @@ def _validate_remote(url: str) -> None:
 
 
 def _select(project: Project, scene: Scene, asset: MaterialAsset) -> Project:
-    scene.selected_asset = asset.local_path
-    scene.selected_asset_type = asset.media_type
-    scene.source_name = asset.source
-    scene.source_url = asset.source_url or None
-    scene.status = "asset_selected"
-    return save_project(project)
+    return library.assign_asset(project, scene, asset)
 
 
 async def download_asset(project: Project, scene: Scene, result: SearchResult) -> Project:
-    _validate_remote(result.download_url)
-    existing = library.find_asset(project.id, result.id)
     query = scene.search_query.strip()
+    if result.source == "local" or result.download_url.startswith("local://"):
+        asset = library.find_asset(result.id)
+        if not asset:
+            raise FileNotFoundError("本機素材不存在")
+        if query:
+            asset.search_queries = [*asset.search_queries, query]
+            library.upsert_asset(asset)
+        return _select(project, scene, asset)
+
+    _validate_remote(result.download_url)
+    existing = library.find_asset(result.id)
     if existing and Path(existing.local_path).exists():
-        existing.search_queries = [*existing.search_queries, query] if query else existing.search_queries
+        if query:
+            existing.search_queries = [*existing.search_queries, query]
         existing.tags = [*existing.tags, *result.tags]
-        library.upsert_asset(project.id, existing)
+        library.upsert_asset(existing)
         return _select(project, scene, existing)
 
-    folder = project_path(project.id) / "assets"
-    folder.mkdir(parents=True, exist_ok=True)
-    target = folder / f"{result.id}{_safe_suffix(result.download_url, result.media_type)}"
+    target = settings.assets_path / f"{result.id}{_safe_suffix(result.download_url, result.media_type)}"
     async with httpx.AsyncClient(timeout=60, follow_redirects=True) as client:
         async with client.stream("GET", result.download_url) as response:
             response.raise_for_status()
@@ -59,16 +63,14 @@ async def download_asset(project: Project, scene: Scene, result: SearchResult) -
         source_url=result.page_url, author=result.author, title=result.title,
         tags=result.tags, search_queries=[query] if query else [],
     )
-    library.upsert_asset(project.id, asset)
+    library.upsert_asset(asset)
     return _select(project, scene, asset)
 
 
 async def upload_asset(project: Project, scene: Scene, upload: UploadFile) -> Project:
-    folder = project_path(project.id) / "assets"
-    folder.mkdir(parents=True, exist_ok=True)
     suffix = Path(upload.filename or "asset").suffix.lower()
     asset_id = f"manual-{uuid.uuid4().hex[:10]}"
-    target = folder / f"{asset_id}{suffix or '.bin'}"
+    target = settings.assets_path / f"{asset_id}{suffix or '.bin'}"
     target.write_bytes(await upload.read())
     image_ext = {".jpg", ".jpeg", ".png", ".webp", ".bmp"}
     media_type = "image" if suffix in image_ext else "video"
@@ -77,5 +79,5 @@ async def upload_asset(project: Project, scene: Scene, upload: UploadFile) -> Pr
         source="manual", title=upload.filename or asset_id,
         search_queries=[scene.search_query] if scene.search_query.strip() else [],
     )
-    library.upsert_asset(project.id, asset)
+    library.upsert_asset(asset)
     return _select(project, scene, asset)
