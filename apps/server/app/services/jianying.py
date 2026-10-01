@@ -31,7 +31,7 @@ def export_jianying(project: Project, draft_folder: str, draft_name: str | None 
         draft.TrackSpec(draft.TrackType.text, "caption"),
     ])
     for scene, clip in zip(project.scenes, clips):
-        timerange = draft.trange_seconds(scene.start, duration=scene.duration)
+        timerange = draft.trange(f"{scene.start}s", f"{scene.duration}s")
         script.add_segment(draft.VideoSegment(str(clip), timerange), "main_video")
         script.add_segment(draft.TextSegment(scene.narration, timerange), "caption")
 
@@ -43,7 +43,7 @@ def export_jianying(project: Project, draft_folder: str, draft_name: str | None 
         script.add_segment(
             draft.AudioSegment(
                 str(narration),
-                draft.trange_seconds(0, duration=max(0.1, audio_duration)),
+                draft.trange("0s", f"{max(0.1, audio_duration)}s"),
             ),
             "narration",
         )
