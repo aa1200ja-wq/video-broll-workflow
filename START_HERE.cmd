@@ -38,7 +38,7 @@ if not exist .venv\Scripts\python.exe (
 )
 
 echo [2/4] Checking Python packages...
-.venv\Scripts\python.exe -c "import fastapi,uvicorn,httpx,edge_tts" >nul 2>nul
+.venv\Scripts\python.exe -c "import fastapi,uvicorn,httpx,edge_tts,imageio_ffmpeg,mutagen" >nul 2>nul
 if errorlevel 1 (
   echo Installing Python packages...
   .venv\Scripts\python.exe -m pip install -U pip
